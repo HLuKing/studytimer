@@ -12,7 +12,20 @@
           "package_name": "com.example.stardylog"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "520849174357-b3aogqnlbfeatnp5rg5bf4069kalhc7l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.stardylog",
+            "certificate_hash": "01813e7509037f3b0c1fbc9c7062e3a5c8a483fb"
+          }
+        },
+        {
+          "client_id": "520849174357-54rr196ggr7d83eo2njqc08f2hdgeph6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAE75gdNrIiHnQ3PHyg9CBiXp359PnvZRQ"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "520849174357-54rr196ggr7d83eo2njqc08f2hdgeph6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
