@@ -12,11 +12,12 @@ class Routes {
 class AppRouter {
   static Route onGenerateRoute(RouteSettings s) {
     switch (s.name) {
-      case Routes.welcome: return _page(const WelcomeScreen());
-      case Routes.login: return _page(const LoginScreen());
-      case Routes.home: return _page(const HomeScreen());
-      default: return _page(const WelcomeScreen());
+      case Routes.welcome: return _p(const WelcomeScreen());
+      case Routes.login: return _p(const LoginScreen());
+      case Routes.home: return _p(const HomeScreen());
+      default: return _p(const WelcomeScreen());
     }
   }
-  static MaterialPageRoute _page(Widget child) => MaterialPageRoute(builder: (_) => child);
+  static MaterialPageRoute _p(Widget child) =>
+      MaterialPageRoute(builder: (_) => child);
 }
