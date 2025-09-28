@@ -47,8 +47,8 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
                                 .uid(decoded.getUid())
                                 .createdAt(Instant.now())
                                 .build());
+
                 u.setEmail(decoded.getEmail());
-                u.setDisplayName(decoded.getName());
                 u.setProvider(provider);
                 u.setLastLoginAt(Instant.now());
                 userRepository.save(u);

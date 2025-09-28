@@ -1,73 +1,66 @@
-import 'package:flutter/material.dart';
-import 'package:stardylog/services/api_service.dart';
-import '../services/auth_service.dart';
-import '../routes/app_router.dart';
+// lib/screens/home_screen.dart
 
-class HomeScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:lucide_flutter/lucide_flutter.dart';
+import 'goals_screen.dart';
+import 'settings_screen.dart';
+import 'statistics_screen.dart';
+import 'study_tracker_screen.dart';
+
+// 기존 HomeScreen을 MainScreen(탭 화면)으로 교체
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context){
-    final auth = AuthService();
-    final user = auth.currentUser;
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _widgetOptions = <Widget>[
+    StudyTrackerScreen(),
+    StatisticsScreen(),
+    GoalsScreen(),
+    SettingsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("홈"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await auth.signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context, Routes.login, (_) => false);
-              }
-            },
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.timer),
+            label: '타이머',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.chartBar),
+            label: '통계',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.target),
+            label: '목표',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.settings),
+            label: '설정',
           ),
         ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '로그인 성공!\n${user?.displayName ?? user?.email ?? user?.uid}',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-
-            FutureBuilder<String?>(
-              future: user?.getIdToken(true),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                if (snapshot.hasError) {
-                  return Text("토큰 에러: ${snapshot.error}");
-                }
-                if (!snapshot.hasData) {
-                  return const Text("토큰 없음");
-                }
-                final idToken = snapshot.data!;
-                debugPrint("ID_TOKEN: $idToken");
-
-                return Text(
-                  "ID Token:\n$idToken",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: () async {
-                await ApiService.testBackend();
-              },
-              child: const Text("백엔드 연결 테스트"),
-            ),
-          ],
-        ),
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed, // 아이템이 많아도 고정
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey,
       ),
     );
   }

@@ -1,137 +1,84 @@
+// lib/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lucide_flutter/lucide_flutter.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../routes/app_router.dart';
-import '../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _auth = AuthService();
-  bool _loading = false;
-  String? _error;
-
-  Future<void> _run(Future fn) async {
-    setState(() { _loading = true; _error = null; });
-    try {
-      await fn;
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, Routes.home);
-      }
-    } catch (e) {
-      setState(() {_error = '$e'; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('로그인 실패: $e')),
-      );
-    } finally {
-      if(mounted) setState(() { _loading = false; });
-    }
-  }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      backgroundColor: Colors.grey[100],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('안녕하세요',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 40),
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_error != null) ...[
-                          Text(_error!, style: const TextStyle(color: Colors.red)),
-                          const SizedBox(height: 12),
-                        ],
-                        FilledButton.icon(
-                          onPressed: _loading 
-                              ? null 
-                              : () => _run(_auth.signInWithGoogle()),
-                          icon: const Icon(Icons.login),
-                          label: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text('구글로 로그인하기'),
-                          ),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            await _auth.forceGoogleReauth();
-                            await _run(_auth.signInWithGoogle());
-                          },
-                          child: const Text('다른 계정으로 로그인'),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _loading
-                              ? null
-                              : () => _run(_auth.signInWithKakaoOIDC()),
-                          icon: const Icon(Icons.chat_bubble_outline),
-                          label: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text('카카오로 로그인하기'),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _loading
-                              ? null
-                              : () async {
-                                await _auth.forceKakaoReauth();
-                                await _run(_auth.signInWithKakaoOIDC());
-                              },
-                          icon: const Icon(Icons.refresh),
-                          label: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text('카카오 계정 다시 로그인'),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        ElevatedButton.icon(
-                          onPressed: _loading ? null : () async {
-                            await _auth.signOut();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('로그아웃 되었습니다.')),
-                            );
-                          },
-                          icon: const Icon(Icons.logout),
-                          label: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text('카카오톡 로그아웃'),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            backgroundColor: Colors.redAccent,
-                          ),
-                        ),
-                        if (_loading) ...[
-                          const SizedBox(height: 20),
-                          const CircularProgressIndicator()
-                        ],
-                      ],
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
                     ),
-                  ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(LucideIcons.timer, size: 60, color: Colors.black54),
+                    const SizedBox(height: 16),
+                    const Text('스터디 로그', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    const Text('체계적인 공부 시간 관리로\n목표를 달성해보세요', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.black54)),
+                    const SizedBox(height: 40),
+                    ElevatedButton.icon(
+                      onPressed: () => authProvider.signInWithGoogle(),
+                      icon: SvgPicture.asset('assets/icons/google_logo.svg', height: 22, width: 22),
+                      label: const Text('Google로 계속하기', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.grey[800],
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => authProvider.signInWithKakao(),
+                      icon: SvgPicture.asset('assets/icons/kakao_logo.svg', height: 18),
+                      label: const Text('카카오로 계속하기', style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFE500),
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 40),
+              // ... (하단 텍스트는 이전 답변과 동일)
             ],
           ),
         ),
