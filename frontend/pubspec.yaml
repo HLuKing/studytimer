@@ -19,7 +19,10 @@ dependencies:
   lucide_flutter: ^0.544.0
   flutter_svg: ^2.0.10+1
   simple_icons: ^14.6.1
+  fl_chart: ^1.1.1
+  fl_chart_flutter: ^0.70.3
   cupertino_icons: ^1.0.8
+
 
 dev_dependencies:
   flutter_test:

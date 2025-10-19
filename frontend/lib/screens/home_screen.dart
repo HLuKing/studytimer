@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
-import 'goals_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'study_tracker_screen.dart';
@@ -21,7 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     StudyTrackerScreen(),
     StatisticsScreen(),
-    GoalsScreen(),
     SettingsScreen(),
   ];
 
@@ -46,10 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.chartBar),
             label: '통계',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.target),
-            label: '목표',
           ),
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.settings),

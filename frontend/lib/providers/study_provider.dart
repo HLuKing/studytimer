@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stardylog/services/api_service.dart';
 import '../models/lap_time_model.dart';
 import '../models/study_session_model.dart';
 import '../models/subject_model.dart';
+import '../services/api_service.dart';
 
 class StudyProvider with ChangeNotifier {
   List<StudySession> _sessions = [];
@@ -34,25 +36,52 @@ class StudyProvider with ChangeNotifier {
   // ---
 
   Future<void> loadData() async {
+    // 1. 과목 정보는 여전히 로컬에서 로드 (또는 추후 서버에서 로드)
     final prefs = await SharedPreferences.getInstance();
-    // 세션 로드
-    final sessionsData = prefs.getString('studySessions');
-    if (sessionsData != null) {
-      final List<dynamic> decoded = jsonDecode(sessionsData);
-      _sessions = decoded.map((item) => StudySession.fromJson(item)).toList();
-    } else {
-      _sessions = [_getSampleSession()];
-      await _saveSessions();
-    }
-    // 과목 로드
     final subjectsData = prefs.getString('studySubjects');
     if (subjectsData != null) {
       final List<dynamic> decoded = jsonDecode(subjectsData);
       _subjects = decoded.map((item) => Subject.fromJson(item)).toList();
     } else {
-      _subjects = _getDefaultSubjects();
+      _subjects = _getDefaultSubjects(); // 샘플 데이터 사용
       await _saveSubjects();
     }
+
+    // 2. 공부 기록(Session)은 서버에서 가져오도록 변경
+    try {
+      final List<dynamic> serverLogs = await ApiService.fetchStudyLogs();
+      
+      // 3. 서버 데이터(StudyLogResponse)를 앱 모델(StudySession)로 변환
+      _sessions = serverLogs.map((log) {
+        String subjectName = log['subjectName'];
+        // 서버에서 받은 subjectName을 기준으로 로컬 _subjects 리스트에서 subjectId 찾기
+        String subjectId = _subjects.firstWhere(
+          (s) => s.name == subjectName,
+          orElse: () => _subjects.first, // 못찾으면 첫번째 과목으로 지정
+        ).id;
+        
+        DateTime endTime = DateTime.parse(log['endTime']);
+        int studyDuration = log['studyDurationSeconds'];
+        
+        return StudySession(
+          id: log['id'].toString(),
+          subjectId: subjectId,
+          // 서버에는 startTime이 없으므로 endTime에서 역산
+          startTime: endTime.subtract(Duration(seconds: studyDuration)), 
+          endTime: endTime,
+          date: DateFormat('yyyy-MM-dd').format(endTime.toLocal()), // 현지 시간 기준으로 날짜 저장
+          studyDuration: studyDuration,
+          breakDuration: log['breakDurationSeconds'],
+        );
+      }).toList();
+      
+      print("서버에서 ${serverLogs.length}개의 공부 기록을 로드했습니다.");
+
+    } catch (e) {
+      print("서버 로그 로드 실패: $e");
+      _sessions = []; // 실패 시 비우기
+    }
+
     notifyListeners();
   }
   

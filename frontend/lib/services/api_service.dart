@@ -10,6 +10,10 @@ class ApiService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
     final token = await user.getIdToken();
+    print("=========================================");
+    print("Firebase ID 토큰 (이것을 복사하세요):");
+    print(token);
+    print("=========================================");
     final res = await http.get(
       Uri.parse("$baseUrl/me"),
       headers: {"Authorization": "Bearer $token"},
@@ -71,5 +75,25 @@ class ApiService {
       throw Exception("공부 기록 저장 실패: ${res.statusCode} ${res.body}");
     }
     print("공부 기록이 서버에 저장되었습니다.");
+  }
+
+  static Future<List<dynamic>> fetchStudyLogs() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+    
+    final token = await user.getIdToken();
+    final url = Uri.parse("$baseUrl/api/logs/study");
+
+    final res = await http.get(
+      url,
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (res.statusCode == 200) {
+      // Spring Boot가 반환한 JSON 배열(List)을 디코딩
+      // 한글 깨짐 방지를 위해 utf8.decode 사용
+      return jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
+    }
+    throw Exception("공부 기록 로드 실패: ${res.statusCode}");
   }
 }
