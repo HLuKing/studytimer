@@ -20,7 +20,9 @@ public class StudyLog {
     private User user;
 
     private String subjectName;
-    private int studyDurationSeconds;
-    private int breakDurationSeconds;
+    private String sessionId;
+    private String intervalType;
+    private int durationSeconds;
+    private Instant startTime;
     private Instant endTime;
 }

@@ -8,11 +8,17 @@ public record StudyLogRequest(
         @NotBlank
         String subjectName,
 
-        @NotNull
-        Integer studyDurationSeconds,
+        @NotBlank
+        String sessionId,
+
+        @NotBlank
+        String intervalType,
 
         @NotNull
-        Integer breakDurationSeconds,
+        Integer durationSeconds,
+
+        @NotNull
+        Instant startTime,
 
         @NotNull
         Instant endTime

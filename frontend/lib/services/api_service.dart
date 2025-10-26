@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:stardylog/models/study_session_model.dart';
+import '../models/lap_time_model.dart';
 
 class ApiService {
   static const String baseUrl = "http://10.0.2.2:8080";
@@ -43,24 +44,39 @@ class ApiService {
     throw Exception("닉네임 설정 실패: ${res.statusCode}");
   }
 
-  static Future<void> saveStudyLog(StudySession session, String subjectName) async {
+  static Future<void> saveStudyLaps(List<LapTime> laps, String sessionId, String subjectName) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || session.endTime == null) return;
+    if (user == null || laps.isEmpty) return;
 
     final token = await user.getIdToken();
     final url = Uri.parse("$baseUrl/api/logs/study");
 
-    final endTimeString = session.endTime!.toIso8601String();
-    final formattedEndTime = endTimeString.endsWith('Z')
-        ? endTimeString.substring(0, 23) + 'Z'
-        : endTimeString.substring(0, 23) + 'Z';
+    final List<Map<String, dynamic>> lapsData = laps.map((lap) {
+      final startTime = lap.timestamp.subtract(lap.duration);
+      final endTime = lap.timestamp;
 
-    final body = jsonEncode({
-      'subjectName': subjectName,
-      'studyDurationSeconds': session.studyDuration,
-      'breakDurationSeconds': session.breakDuration,
-      'endTime': formattedEndTime,
-    });
+      final startTimeString = startTime.toIso8601String();
+      final formattedStartTime = startTimeString.endsWith('Z')
+          ? startTimeString.substring(0, 23) + 'Z'
+          : startTimeString.substring(0, 23) + 'Z';
+
+      final endTimeString = endTime.toIso8601String();
+      final formattedEndTime = endTimeString.endsWith('Z')
+          ? endTimeString.substring(0, 23) + 'Z'
+          : endTimeString.substring(0, 23) + 'Z';
+
+          return {
+            'sessionId': sessionId,
+            'subjectName': subjectName,
+            'intervalType': lap.type == LapType.study ? 'STUDY' : 'BREAK',
+            'durationSeconds': lap.duration.inSeconds,
+            'startTime': formattedStartTime,
+            'endTime': formattedEndTime,
+          };
+    }).toList();
+
+
+    final body = jsonEncode(lapsData);
 
     final res = await http.post(
       url,

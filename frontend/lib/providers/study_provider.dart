@@ -7,6 +7,7 @@ import '../models/lap_time_model.dart';
 import '../models/study_session_model.dart';
 import '../models/subject_model.dart';
 import '../services/api_service.dart';
+import '../models/lap_time_model.dart';
 
 class StudyProvider with ChangeNotifier {
   List<StudySession> _sessions = [];
@@ -36,7 +37,6 @@ class StudyProvider with ChangeNotifier {
   // ---
 
   Future<void> loadData() async {
-    // 1. 과목 정보는 여전히 로컬에서 로드 (또는 추후 서버에서 로드)
     final prefs = await SharedPreferences.getInstance();
     final subjectsData = prefs.getString('studySubjects');
     if (subjectsData != null) {
@@ -60,18 +60,20 @@ class StudyProvider with ChangeNotifier {
           orElse: () => _subjects.first, // 못찾으면 첫번째 과목으로 지정
         ).id;
         
+        DateTime startTime = DateTime.parse(log['startTime']);
         DateTime endTime = DateTime.parse(log['endTime']);
-        int studyDuration = log['studyDurationSeconds'];
+        String intervalType = log['intervalType'] ?? 'STUDY'; // "study" or "breakTime"
+
+        int duration = log['durationSeconds'] ?? 0;
         
         return StudySession(
           id: log['id'].toString(),
           subjectId: subjectId,
-          // 서버에는 startTime이 없으므로 endTime에서 역산
-          startTime: endTime.subtract(Duration(seconds: studyDuration)), 
+          startTime: startTime, 
           endTime: endTime,
           date: DateFormat('yyyy-MM-dd').format(endTime.toLocal()), // 현지 시간 기준으로 날짜 저장
-          studyDuration: studyDuration,
-          breakDuration: log['breakDurationSeconds'],
+          studyDuration: intervalType == 'STUDY' ? duration : 0,
+          breakDuration: intervalType == 'BREAK' ? duration : 0,
         );
       }).toList();
       
@@ -163,27 +165,31 @@ class StudyProvider with ChangeNotifier {
     final now = DateTime.now();
     final duration = now.difference(_lapStartTime!);
 
+    List<LapTime> finalLaps = List.from(_lapTimes);
+
     if (_isPaused) {
-      _totalBreakSeconds += duration.inSeconds;
+      finalLaps.add(LapTime(
+        id: now.millisecondsSinceEpoch.toString(),
+        type: LapType.breakTime,
+        duration: duration,
+        subjectId: _currentSession!.subjectId,
+        timestamp: now
+      ));
     } else {
-      _totalStudySeconds += duration.inSeconds;
+      finalLaps.add(LapTime(
+        id: now.millisecondsSinceEpoch.toString(),
+        type: LapType.study,
+        duration: duration,
+        subjectId: _currentSession!.subjectId,
+        timestamp: now
+      ));
     }
 
-    final completedSession = StudySession(
-      id: _currentSession!.id,
-      subjectId: _currentSession!.subjectId,
-      startTime: _currentSession!.startTime,
-      endTime: now,
-      date: _currentSession!.date,
-      studyDuration: _totalStudySeconds,
-      breakDuration: _totalBreakSeconds,
-    );
-    _sessions.add(completedSession);
-    _saveSessions();
-
     try {
-      final subject = _subjects.firstWhere((s) => s.id == completedSession.subjectId);
-      await ApiService.saveStudyLog(completedSession, subject.name);
+      final subject = _subjects.firstWhere((s) => s.id == currentSession!.subjectId);
+      await ApiService.saveStudyLaps(finalLaps, _currentSession!.id, subject.name);
+
+      await loadData();
     } catch (e) {
       print("서버 전송 실패: $e");
     }
@@ -194,7 +200,6 @@ class StudyProvider with ChangeNotifier {
     _lapTimes = [];
     _totalStudySeconds = 0;
     _totalBreakSeconds = 0;
-    notifyListeners();
   }
 
   void pauseStudy() {

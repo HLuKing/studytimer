@@ -7,8 +7,10 @@ import java.time.Instant;
 public record StudyLogResponse(
         Long id,
         String subjectName,
-        int studyDurationSeconds,
-        int breakDurationSeconds,
+        String sessionId,
+        String intervalType,
+        int durationSeconds,
+        Instant startTime,
         Instant endTime
 ) {
     // StudyLog 엔티티를 DTO로 변환하는 생성자
@@ -16,8 +18,10 @@ public record StudyLogResponse(
         this(
                 log.getId(),
                 log.getSubjectName(),
-                log.getStudyDurationSeconds(),
-                log.getBreakDurationSeconds(),
+                log.getSessionId(),
+                log.getIntervalType(),
+                log.getDurationSeconds(),
+                log.getStartTime(),
                 log.getEndTime()
         );
     }

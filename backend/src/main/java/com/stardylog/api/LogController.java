@@ -25,20 +25,24 @@ public class LogController {
     private final StudyLogRepository studyLogRepository;
 
     @PostMapping("/study")
-    public ResponseEntity<Void> addStudyLog(Authentication auth, @RequestBody @Valid StudyLogRequest req) {
+    public ResponseEntity<Void> addStudyLogs(Authentication auth, @RequestBody @Valid List<StudyLogRequest> requests) {
         String uid = (String) auth.getPrincipal();
         var user = userRepository.findById(uid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        StudyLog newLog = StudyLog.builder()
-                .user(user)
-                .subjectName(req.subjectName())
-                .studyDurationSeconds(req.studyDurationSeconds())
-                .breakDurationSeconds(req.breakDurationSeconds())
-                .endTime(req.endTime())
-                .build();
+        List<StudyLog> logsToSave = requests.stream().map(req ->
+                StudyLog.builder()
+                        .user(user)
+                        .sessionId(req.sessionId())
+                        .subjectName(req.subjectName())
+                        .intervalType(req.intervalType())
+                        .durationSeconds(req.durationSeconds())
+                        .startTime(req.startTime())
+                        .endTime(req.endTime())
+                        .build()
+        ).toList();
 
-        studyLogRepository.save(newLog);
+        studyLogRepository.saveAll(logsToSave);
 
         return ResponseEntity.ok().build();
     }

@@ -1232,7 +1232,10 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
 
 
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedDate = date),
+                  onTap: () => setState(() {
+                    _selectedDate = date;
+                    _calendarViewDate = date;
+                  }),
                   child: Container(
                     margin: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
@@ -1478,18 +1481,22 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(2),
                   ),
-                  child: Stack(
-                    children: hourSegments.map((segment) {
-                       final left = segment['start'] / 60.0;
-                       final width = (segment['end'] - segment['start']) / 60.0;
-                       return Positioned(
-                         left: MediaQuery.of(context).size.width * 0.7 * left, // 대략적인 계산
-                         width: MediaQuery.of(context).size.width * 0.7 * width,
-                         top: 0,
-                         bottom: 0,
-                         child: Container(color: segment['color'].withOpacity(0.7)),
-                       );
-                    }).toList(),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Stack(
+                        children: hourSegments.map((segment) {
+                          final leftPersent = segment['start'] / 60.0;
+                          final widthPersent = (segment['end'] - segment['start']) / 60.0;
+                          return Positioned(
+                            left: constraints.maxWidth * leftPersent,
+                            width: constraints.maxWidth * widthPersent,
+                            top: 0,
+                            bottom: 0,
+                            child: Container(color: segment['color'].withOpacity(0.7)),
+                          );
+                        }).toList(),
+                      );
+                    }
                   ),
                 ),
               ),
