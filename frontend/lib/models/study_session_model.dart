@@ -6,6 +6,7 @@ class StudySession {
   final String date; // YYYY-MM-DD format for easier filtering
   final int studyDuration; // seconds
   final int breakDuration; // seconds
+  final String intervalType;
 
   StudySession({
     required this.id,
@@ -15,6 +16,7 @@ class StudySession {
     required this.date,
     this.studyDuration = 0,
     this.breakDuration = 0,
+    this.intervalType = 'STUDY',
   });
 
   factory StudySession.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class StudySession {
       date: json['date'],
       studyDuration: json['studyDuration'] ?? 0,
       breakDuration: json['breakDuration'] ?? 0,
+      intervalType: json['intervalType'] ?? 'STUDY',
     );
   }
 
@@ -38,6 +41,7 @@ class StudySession {
       'date': date,
       'studyDuration': studyDuration,
       'breakDuration': breakDuration,
+      'intervalType': intervalType,
     };
   }
 }

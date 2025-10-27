@@ -40,7 +40,7 @@ class _StatItem extends StatelessWidget {
     required this.label,
     this.subLabel,
     this.valueStyle,
-    this.labelStyle
+    this.labelStyle,
   });
 
   @override
@@ -71,10 +71,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now(); // 일간/주간/월간 뷰 기준 날짜
   DateTime _calendarViewDate = DateTime.now(); // 캘린더 표시 기준 (월/분기/연도 이동용)
-
-  // 주간 뷰 터치 상태 관리
-  int? _touchedWeekIndex; // 분기별 주 선택기 터치 인덱스
-  int? _touchedDayIndex;  // 주간 상세 차트 터치 인덱스 (요일: 0-6)
 
   @override
   void initState() {
@@ -171,7 +167,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
 
     for (var session in selectedSessions) {
       final start = session.startTime;
-      final end = session.endTime ?? start.add(Duration(seconds: session.studyDuration)); // endTime 없으면 studyDuration 사용 가정
       final studyDuration = session.studyDuration.toDouble();
       final breakDuration = session.breakDuration.toDouble();
 
@@ -263,20 +258,31 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
           const SizedBox(height: 16),
           // 파이 차트 카드
           Card(
-             child: Padding(
+            child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                 children: [
-                   const Text('과목별 비율', style: TextStyle(fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 16),
-                   _buildPieChartWithLegend(subjectPieData, subjectSeconds, subjectColors, totalStudySeconds),
-                   const Divider(height: 32),
-                   const Text('공부 / 휴식 비율', style: TextStyle(fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 16),
-                   _buildPieChartWithLegend(studyBreakPieData, {'공부': totalStudySeconds, '휴식': totalBreakSeconds}, {'공부': Theme.of(context).colorScheme.primary, '휴식': Colors.grey.shade400}, totalSeconds),
-                 ]
-               )
-             )
+                children: [
+                  const Text('과목별 비율', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  _buildPieChartWithLegend(subjectPieData, subjectSeconds, subjectColors, totalStudySeconds),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16), // 카드 사이 간격
+
+          // 2. 공부 / 휴식 비율 카드
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  const Text('공부 / 휴식 비율', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  _buildPieChartWithLegend(studyBreakPieData, {'공부': totalStudySeconds, '휴식': totalBreakSeconds}, {'공부': Theme.of(context).colorScheme.primary, '휴식': Colors.grey.shade400}, totalSeconds),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           // 시간대별 공부 시간 카드
@@ -284,7 +290,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
             child: Padding(
                padding: const EdgeInsets.all(16.0),
                child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
                     Text(DateFormat('yyyy년 M월 d일 (E)', 'ko_KR').format(_selectedDate), style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 16),
@@ -293,21 +298,20 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
                )
             )
           ),
-           const SizedBox(height: 16),
+          const SizedBox(height: 16),
            // 타임라인 리스트 카드
-           Card(
-             child: Padding(
-               padding: const EdgeInsets.all(16.0),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text('타임라인', style: Theme.of(context).textTheme.titleMedium),
-                   const SizedBox(height: 8),
-                   ...selectedSessions.map((session) => _buildTimelineListItem(session, subjects)),
-                 ]
-               )
-             )
-           )
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text('타임라인', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  ...selectedSessions.map((session) => _buildTimelineListItem(session, subjects)),
+                ]
+              )
+            )
+          )
         ]
       ],
     );
@@ -382,7 +386,7 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
     final selectedWeekStats = calculateWeekStats(selectedWeekStart);
     final previousWeekStats = calculateWeekStats(previousWeekStart);
 
-    final double totalComparisonDiff = selectedWeekStats['totalStudy'] - previousWeekStats['totalStudy'];
+
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -412,7 +416,7 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
                   spacing: 8.0,
                   runSpacing: 8.0,
                   children: weeksInQuarter.map((weekStart) {
-                    final weekEnd = _getWeekEnd(weekStart);
+                    
                     final weekStat = calculateWeekStats(weekStart); // 각 주의 통계 계산
                     final isSelected = DateUtils.isSameDay(selectedWeekStart, weekStart);
                     return SizedBox(
@@ -479,7 +483,7 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
            child: Padding(
             padding: const EdgeInsets.all(16.0),
              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // 제목 왼쪽 정렬
+               // 제목 왼쪽 정렬
               children: [
                 const Text('시작시간 / 종료시간', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
@@ -490,34 +494,11 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
         ),
          const SizedBox(height: 16),
 
-// --- 4. 공부 / 휴식 비율 ---
+// --- 4. 과목별 비율 ---
         Card(
            child: Padding(
             padding: const EdgeInsets.all(16.0),
              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                 const Text('공부 / 휴식 비율', style: TextStyle(fontWeight: FontWeight.bold)),
-                 const SizedBox(height: 16),
-                 // ### totalBreak 값 전달 확인 ###
-                 _buildRatioPieChart(
-                     selectedWeekStats['totalStudy'],
-                     selectedWeekStats['totalBreak'], // totalBreak 전달
-                     {'공부': Theme.of(context).colorScheme.primary, '휴식': Colors.grey.shade400},
-                     '태그별 휴식량'
-                 ),
-              ]
-            )
-           )
-        ),
-        const SizedBox(height: 16),
-
-// --- 5. 과목별 비율 ---
-        Card(
-           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                  const Text('과목별 비율', style: TextStyle(fontWeight: FontWeight.bold)),
                  const SizedBox(height: 16),
@@ -534,12 +515,61 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
         ),
         const SizedBox(height: 16),
 
+
+// --- 5. 공부 / 휴식 비율 ---
+        Card(
+         child: Padding(
+          padding: const EdgeInsets.all(16.0),
+           child: Column(
+            children: [
+              const Text('공부 / 휴식 비율', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Builder( // Builder를 사용해 context 접근
+                 builder: (context) {
+                   final double totalStudy = selectedWeekStats['totalStudy'] ?? 0.0;
+                   final double totalBreak = selectedWeekStats['totalBreak'] ?? 0.0;
+                   final double totalSeconds = totalStudy + totalBreak;
+                   final primaryColor = Theme.of(context).colorScheme.primary; // 테마에서 primary 색상 가져오기
+                   final onPrimaryColor = Theme.of(context).colorScheme.onPrimary; // primary 위의 색상
+
+                   final List<PieChartSectionData> weeklyStudyBreakPieData = (totalSeconds > 0) ? [
+                     PieChartSectionData(
+                       value: totalStudy,
+                       title: '', // '${(totalStudy / totalSeconds * 100).toStringAsFixed(0)}%', // 제목 제거
+                       color: primaryColor, // 테마 기본 색상 (검은색)
+                       radius: 20, // 두께
+                     ),
+                     PieChartSectionData(
+                       value: totalBreak,
+                       title: '', // '${(totalBreak / totalSeconds * 100).toStringAsFixed(0)}%', // 제목 제거
+                       color: Colors.grey.shade400, // 휴식 색상
+                       radius: 20, // 두께
+                     ),
+                   ] : <PieChartSectionData>[];
+
+                   // 2. _buildRatioPieChart 대신 _buildPieChartWithLegend를 호출합니다.
+                   return _buildPieChartWithLegend(
+                     weeklyStudyBreakPieData, // 직접 만든 데이터 전달
+                     {'공부': totalStudy, '휴식': totalBreak}, // 범례용 데이터
+                     {'공부': primaryColor, '휴식': Colors.grey.shade400}, // 범례용 색상
+                     totalSeconds // 전체 시간
+                   );
+                 }
+               ),
+               // --- 수정 끝 ---
+            ]
+          )
+         )
+      ),
+      const SizedBox(height: 16),
+
+
 // --- 6. 과목별 공부 시간 (일별) ---
         Card(
            child: Padding(
             padding: const EdgeInsets.all(16.0),
              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              
               children: [
                  const Text('과목별 공부시간', style: TextStyle(fontWeight: FontWeight.bold)),
                  const SizedBox(height: 16),
@@ -556,7 +586,7 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
            child: Padding(
             padding: const EdgeInsets.all(16.0),
              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              
               children: [
                  const Text('공부시간 누적', style: TextStyle(fontWeight: FontWeight.bold)),
                  const SizedBox(height: 16),
@@ -570,144 +600,459 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
     );
   }
 
+Map<dynamic, DateTime?> _calculateDailyStartTimes(List<StudySession> sessions, dynamic keySelector(StudySession session)) {
+    final Map<dynamic, DateTime> startTimes = {};
+    for (var session in sessions) {
+      final key = keySelector(session);
+      if (!startTimes.containsKey(key) || session.startTime.isBefore(startTimes[key]!)) {
+        startTimes[key] = session.startTime;
+      }
+    }
+    return startTimes;
+  }
+
+  Map<dynamic, DateTime?> _calculateDailyEndTimes(List<StudySession> sessions, dynamic keySelector(StudySession session)) {
+    final Map<dynamic, DateTime> endTimes = {};
+    for (var session in sessions) {
+      final key = keySelector(session);
+      final endTime = session.endTime ?? session.startTime.add(Duration(seconds: session.studyDuration + session.breakDuration));
+      if (!endTimes.containsKey(key) || endTime.isAfter(endTimes[key]!)) {
+        endTimes[key] = endTime;
+      }
+    }
+    return endTimes;
+  }
+
+  // 월간 비교 막대 차트 (주간 함수 기반 수정)
+  Widget _buildMonthlyComparisonBarChart(
+      Map<int, double> currentMonthTotals, // 일별 공부 시간 (초)
+      Map<int, double> previousMonthTotals, // 일별 공부 시간 (초)
+      int daysInMonth
+  ) {
+    // 시간(초)을 시간(hour) 단위로 변환
+    final List<double> currentHours = List.generate(daysInMonth, (i) => (currentMonthTotals[i+1] ?? 0.0) / 3600.0);
+    final List<double> previousHours = List.generate(daysInMonth, (i) => (previousMonthTotals[i+1] ?? 0.0) / 3600.0);
+
+    // Y축 최대값 계산
+    final double maxCurrent = currentHours.fold<double>(0.0, (p, e) => max(p, e));
+    final double maxPrevious = previousHours.fold<double>(0.0, (p, e) => max(p, e));
+    final double maxY = max(max(maxCurrent, maxPrevious) * 1.2, 0.5); // 최소 0.5시간
+    final double dotHeight = max(maxY * 0.01, 0.01); // 점 높이 (최소값 보장)
+
+
+    return SizedBox(
+      height: 200,
+      child: BarChart(
+        BarChartData(
+          maxY: maxY,
+          minY: 0,
+          barGroups: List.generate(daysInMonth, (dayIndex) { // 0부터 daysInMonth-1
+            final dayOfMonth = dayIndex + 1; // 1부터 daysInMonth
+            final thisMonthHour = currentHours[dayIndex];
+            final lastMonthHour = previousHours[dayIndex];
+
+            return BarChartGroupData(
+              x: dayOfMonth, // X축 값은 1일부터 시작
+              barsSpace: 2, // 월간은 간격 좁게
+              barRods: [
+                BarChartRodData( // 이번 달 막대
+                  toY: thisMonthHour,
+                  color: Theme.of(context).colorScheme.primary, // 테마 기본 색상 (검은색)
+                  width: 4, // 얇게
+                  borderRadius: BorderRadius.zero,
+                ),
+                BarChartRodData( // 지난 달 점
+                  // 점 위치 조정 (막대 가운데 오도록)
+                  fromY: lastMonthHour > 0 ? lastMonthHour - dotHeight : 0,
+                  toY: lastMonthHour,
+                  color: Colors.grey.shade600, // 점 색상
+                  width: 4, // 점 두께
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
+                ),
+              ],
+            );
+          }),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                  final day = value.toInt();
+                  if (day == 1 || day % 7 == 0 || day == daysInMonth) { // 1일, 7일 간격, 마지막 날
+                    return Padding( // 간격 조정
+                       padding: const EdgeInsets.only(top: 4.0),
+                       child: Text('$day', style: const TextStyle(fontSize: 10)),
+                    );
+                  }
+                  return const Text('');
+              },
+              reservedSize: 20, interval: 1, // 모든 X값에 대해 위젯 호출
+            )),
+            leftTitles: AxisTitles(sideTitles: SideTitles( // Y축 (시간 표시)
+              showTitles: true, reservedSize: 30, // 공간 확보
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const Text('0h', style: TextStyle(fontSize: 10));
+                // 정수 시간만 표시
+                if (value > 0 && value == value.toInt() && value <= meta.max) {
+                   return Text('${value.toInt()}h', style: const TextStyle(fontSize: 10));
+                }
+                return const Text('');
+              },
+              interval: max( (maxY / 4).floorToDouble() , 1.0) // 4~5개 라벨 나오도록 간격 조절
+            )),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          borderData: FlBorderData(show: false),
+          gridData: FlGridData( // 가로선만 표시
+            show: true, drawVerticalLine: false,
+            horizontalInterval: max( (maxY / 4).floorToDouble() , 1.0), // Y축 라벨과 동일한 간격
+            getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+          ),
+          barTouchData: BarTouchData( // 툴팁 설정
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (group) => Colors.black87, // 배경색
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  // 막대/점 상관없이 해당 날짜 정보 표시
+                  final dayOfMonth = group.x.toInt();
+                  final thisMonthVal = currentHours[dayOfMonth - 1];
+                  final lastMonthVal = previousHours[dayOfMonth - 1];
+
+                  String title = "${dayOfMonth}일\n";
+                  String thisMonthStr = "이번달: ${formatHourMinute(thisMonthVal * 3600)}\n";
+                  String lastMonthStr = "지난달: ${formatHourMinute(lastMonthVal * 3600)}";
+
+                  return BarTooltipItem(
+                    title,
+                    const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+                    children: [
+                      TextSpan(text: thisMonthStr, style: TextStyle(color: Colors.grey.shade300, fontSize: 10)),
+                      TextSpan(text: lastMonthStr, style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
+                    ]
+                  );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 월간 시작/종료 시간 막대 차트 (주간 함수 기반 수정)
+  Widget _buildMonthlyStartEndBarChart(
+      Map<int, double> dailyStudyTotals, // 일별 *공부* 시간 (초 단위)
+      Map<dynamic, DateTime?> dailyStartTimes, // Map key: day (1~31)
+      Map<dynamic, DateTime?> dailyEndTimes,   // Map key: day (1~31)
+      int daysInMonth
+  ) {
+      // BarChart 데이터 생성
+      final barGroups = List.generate(daysInMonth, (index) {
+          final day = index + 1;
+          // 막대 높이는 시간 단위 (h)
+          final hours = (dailyStudyTotals[day] ?? 0.0) / 3600.0;
+          return BarChartGroupData(x: day, barRods: [
+              BarChartRodData(
+                toY: hours,
+                // 색상은 테마 기본색 연하게
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                width: 5, // 얇게
+                borderRadius: BorderRadius.zero
+              )
+          ]);
+      });
+      // Y축 최대값 (시간 단위)
+      final maxY = barGroups.fold<double>(0.0, (prev, group) => max(prev, group.barRods.first.toY)) * 1.2;
+
+      return SizedBox(
+        height: 150, // 차트 높이
+        child: BarChart(
+          BarChartData(
+              maxY: max(maxY, 1.0), // 최소 높이 1시간
+              barGroups: barGroups,
+              titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                        final day = value.toInt();
+                        if (day == 1 || day % 7 == 0 || day == daysInMonth) { // 1일, 7일 간격, 마지막 날
+                          return Padding( // 간격 조정
+                             padding: const EdgeInsets.only(top: 4.0),
+                             child: Text('$day', style: const TextStyle(fontSize: 10)),
+                          );
+                        }
+                        return const Text('');
+                    },
+                    reservedSize: 20, interval: 1,
+                  )),
+                  leftTitles: AxisTitles(sideTitles: SideTitles( // Y축 (주간과 유사)
+                      showTitles: true, reservedSize: 30,
+                      getTitlesWidget: (value, meta) {
+                          if (value == 0) return const Text('0h');
+                          if (value > 0 && (value % 2 == 0 || value.toStringAsFixed(1).endsWith('.5')) && value <= meta.max) {
+                            return Text('${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}h', style: const TextStyle(fontSize: 10));
+                          }
+                          return const Text('');
+                      },
+                      interval: max( (maxY / 4).floorToDouble() , 0.5) // Y축 간격 조절
+                  )),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              gridData: FlGridData( // 그리드 (주간과 유사)
+                  show: true, drawVerticalLine: false,
+                  horizontalInterval: max( (maxY / 4).floorToDouble() , 0.5), // Y축 간격 조절
+                  getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1)
+              ),
+              // --- 툴팁 로직 ---
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (group) => Colors.black87,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final day = group.x.toInt(); // 날짜 (1 ~ daysInMonth)
+                    final hours = rod.toY; // 공부 시간 (h)
+                    final startTime = dailyStartTimes[day];
+                    final endTime = dailyEndTimes[day];
+                    String tooltipText = "${day}일\n"; // 날짜 표시
+                    tooltipText += "공부: ${formatHourMinute(hours * 3600)}\n";
+                    if (startTime != null) tooltipText += "시작: ${DateFormat('HH:mm').format(startTime)}\n";
+                    if (endTime != null) tooltipText += "종료: ${DateFormat('HH:mm').format(endTime)}";
+                    return BarTooltipItem(
+                      tooltipText,
+                      const TextStyle(color: Colors.white, fontSize: 10),
+                    );
+                  },
+                ),
+             ),
+          ),
+        ),
+      );
+    }
+
   // --- 월간 뷰 ---
 Widget _buildMonthlyView(List<StudySession> sessions) {
+  // --- 1. 월간 데이터 집계 ---
   final subjects = Provider.of<StudyProvider>(context, listen: false).subjects;
   final subjectColors = getSubjectColors(context);
   final year = _selectedDate.year;
   final month = _selectedDate.month;
   final daysInMonth = DateUtils.getDaysInMonth(year, month);
+  final List<StudySession> allSessions = sessions; // 다른 달 비교용
 
   double monthTotalStudySeconds = 0;
-  // ### 1. 데이터 구조 변경: 일자(1-31)를 키로 사용 ###
-  Map<int, Map<String, double>> dailySubjectSeconds = {};
-  for (int day = 1; day <= daysInMonth; day++) {
-    dailySubjectSeconds[day] = {};
-  }
+  double monthTotalBreakSeconds = 0;
+  // 이번달 일별 *공부* 시간 (초 단위, Map key: 1 ~ daysInMonth)
+  Map<int, double> currentMonthDailyStudyTotals = { for (int i = 1; i <= daysInMonth; i++) i: 0.0 };
+  // 월간 과목별 *공부* 시간 (초 단위)
+  Map<String, double> monthlySubjectTotals = {};
+  // 일별/과목별 *공부* 시간 (초 단위, Map key: 1 ~ daysInMonth)
+  Map<int, Map<String, double>> dailySubjectSeconds = { for (int i = 1; i <= daysInMonth; i++) i: {} };
 
+  // 이번달 세션 데이터 집계
   for (var session in sessions) {
     final sessionDate = DateTime.parse(session.date);
-    // 월간 필터링 강화
     if (sessionDate.year == year && sessionDate.month == month) {
-      monthTotalStudySeconds += session.studyDuration;
-      final dayOfMonth = sessionDate.day; // 1 ~ daysInMonth
-      final subject = subjects.firstWhere((sub) => sub.id == session.subjectId, orElse: () => subjects.first);
-      dailySubjectSeconds[dayOfMonth]![subject.name] = (dailySubjectSeconds[dayOfMonth]![subject.name] ?? 0) + session.studyDuration;
+      final dayOfMonth = sessionDate.day;
+      final studySec = session.studyDuration.toDouble();
+      final breakSec = session.breakDuration.toDouble();
+
+      monthTotalStudySeconds += studySec;
+      monthTotalBreakSeconds += breakSec;
+      currentMonthDailyStudyTotals[dayOfMonth] = (currentMonthDailyStudyTotals[dayOfMonth] ?? 0.0) + studySec;
+
+      if (session.intervalType == 'STUDY' && studySec > 0) {
+        final subject = subjects.firstWhere((sub) => sub.id == session.subjectId, orElse: () => subjects.first);
+        monthlySubjectTotals[subject.name] = (monthlySubjectTotals[subject.name] ?? 0.0) + studySec;
+        dailySubjectSeconds[dayOfMonth]![subject.name] = (dailySubjectSeconds[dayOfMonth]![subject.name] ?? 0) + studySec;
+      }
     }
   }
 
-  // 차트 데이터 생성
-  final barGroups = List.generate(daysInMonth, (index) {
-    final day = index + 1;
-    final subjectData = dailySubjectSeconds[day]!;
-    final rods = <BarChartRodData>[];
-    double currentY = 0;
-    final sortedSubjects = subjectData.keys.toList()..sort();
-
-    for (var subjectName in sortedSubjects) {
-      final seconds = subjectData[subjectName]!;
-      // ### 2. 0초 데이터는 막대로 그리지 않음 ###
-      if (seconds <= 0) continue;
-      final hours = seconds / 3600.0;
-      rods.add(BarChartRodData(
-          // ### 3. fromY/toY 값 명확히 설정 ###
-          fromY: currentY,
-          toY: currentY + hours,
-          color: subjectColors[subjectName] ?? Colors.grey,
-          width: 8,
-          borderRadius: BorderRadius.zero));
-      currentY += hours;
+  // 지난달 일별 *공부* 시간 계산 (비교용)
+  final prevMonthDate = DateTime(year, month - 1, 1);
+  final daysInPrevMonth = DateUtils.getDaysInMonth(prevMonthDate.year, prevMonthDate.month);
+  // 지난달 일별 *공부* 시간 (초 단위, Map key: 1 ~ daysInMonth)
+  Map<int, double> prevMonthDailyStudyTotals = { for (int i = 1; i <= daysInMonth; i++) i: 0.0 };
+  double prevMonthTotalStudySeconds = 0;
+  for (var session in sessions) {
+    final sessionDate = DateTime.parse(session.date);
+    if (sessionDate.year == prevMonthDate.year && sessionDate.month == prevMonthDate.month) {
+       prevMonthTotalStudySeconds += session.studyDuration;
+       if(sessionDate.day <= daysInMonth) { // 현재 월 일수보다 작거나 같은 날짜만 집계
+          prevMonthDailyStudyTotals[sessionDate.day] = (prevMonthDailyStudyTotals[sessionDate.day] ?? 0.0) + session.studyDuration;
+       }
     }
-    if (rods.isEmpty) rods.add(BarChartRodData(toY: 0, color: Colors.transparent));
+  }
+  // 월간 총 공부 시간 비교값
+  final double comparisonDiff = monthTotalStudySeconds - prevMonthTotalStudySeconds;
 
-    return BarChartGroupData(x: day, barRods: rods); // x는 1 ~ daysInMonth
-  });
+  // 공부 기록이 있는 과목 리스트 (범례용)
+  final subjectsWithData = subjects.where((s) => (monthlySubjectTotals[s.name] ?? 0.0) > 0).toList();
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildMonthlyCalendarNavigator(), // 월간 캘린더 네비게이터 (새로 추가)
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  '${year}년 ${month}월',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                 const SizedBox(height: 16),
-                _StatItem(value: formatHourMinute(monthTotalStudySeconds), label: '총 공부 시간'),
-                 // TODO: 이전 달 비교 로직 추가 가능
-                const SizedBox(height: 24),
-                 SizedBox(
-                  height: 250, // 차트 높이
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      barGroups: barGroups,
-                       titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                                // 5일 간격으로 표시
-                                if (value.toInt() % 5 == 0 || value == 1 || value == daysInMonth) {
-                                   return Text('${value.toInt()}', style: const TextStyle(fontSize: 10));
-                                }
-                                return const Text('');
-                            },
-                             reservedSize: 20,
-                          ),
-                        ),
-                        leftTitles: AxisTitles( // 주간뷰와 동일
-                          sideTitles: SideTitles(
-                             showTitles: true,
-                             reservedSize: 30,
-                             getTitlesWidget: (value, meta) {
-                                if (value % 2 == 0 && value != 0) {
-                                   return Text('${value.toInt()}h', style: const TextStyle(fontSize: 10));
-                                }
-                                return const Text('');
-                             }
-                          ),
-                        ),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      ),
-                       borderData: FlBorderData(show: false),
-                       gridData: FlGridData( // 주간뷰와 동일
-                          show: true,
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1)
-                      ),
-                      barTouchData: BarTouchData( // 주간뷰와 동일
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (group) => Colors.black87,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final subjectName = subjectColors.entries.firstWhere((entry) => entry.value == rod.color, orElse: () => MapEntry('기타', Colors.grey)).key;
-                              final hours = rod.toY - rod.fromY;
-                              return BarTooltipItem(
-                                '${group.x.toInt()}일 $subjectName\n',
-                                const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                children: <TextSpan>[TextSpan(text: formatHourMinute(hours * 3600), style: const TextStyle(color: Colors.white))],
-                              );
-                            },
-                          ),
-                        ),
-                    ),
-                  ),
-                ),
-                 const SizedBox(height: 16),
-                 _buildChartLegend(subjectColors, subjects), // 범례 표시
-              ],
-            ),
+  // 이번달 일별 시작/종료 시간 계산
+  final monthlySessions = sessions.where((s) {
+     final sessionDate = DateTime.parse(s.date);
+     return sessionDate.year == year && sessionDate.month == month;
+  }).toList();
+  // Map key: 1 ~ daysInMonth
+  final dailyStartTimes = _calculateDailyStartTimes(monthlySessions, (s) => DateTime.parse(s.date).day);
+  final dailyEndTimes = _calculateDailyEndTimes(monthlySessions, (s) => DateTime.parse(s.date).day);
+
+
+  // --- 2. UI 구성 (ListView - 주간 탭 순서 기준) ---
+  return ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      // --- 카드 1: 월간 캘린더 네비게이터 ---
+      _buildMonthlyCalendarNavigator(), // 월 이동 UI
+      const SizedBox(height: 16),
+
+      // --- 카드 2: 월간 요약 및 비교 차트 ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Text('${year}년 ${month}월', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Row( // 총 시간, 하루 평균
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _StatItem(value: formatHourMinute(monthTotalStudySeconds), label: '총 시간', subLabel: '(휴식 ${formatHourMinute(monthTotalBreakSeconds)})'),
+                  _StatItem(value: formatHourMinute(monthTotalStudySeconds / daysInMonth), label: '하루 평균'),
+                ],
+              ),
+              const SizedBox(height: 16),
+               Text( // 지난달 총 시간 비교
+                '지난달 대비: ${comparisonDiff >= 0 ? '+' : ''}${formatHourMinute(comparisonDiff.abs())}',
+                style: TextStyle(fontSize: 12, color: comparisonDiff >= 0 ? Colors.green : Colors.red),
+              ),
+              const SizedBox(height: 16),
+              // 월간 비교 차트 (이번달 막대 vs 지난달 점)
+              _buildMonthlyComparisonBarChart(currentMonthDailyStudyTotals, prevMonthDailyStudyTotals, daysInMonth),
+            ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 16),
+
+      // --- 카드 3: 시작/종료 시간 차트 ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const Text('시작/종료 시간', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              // 월간 시작/종료 차트 (일별 공부 시간 막대 + 툴팁)
+              _buildMonthlyStartEndBarChart(currentMonthDailyStudyTotals, dailyStartTimes, dailyEndTimes, daysInMonth),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // --- 카드 4: 과목별 비율 ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const Text('과목별 비율', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Builder( // Builder 추가
+                builder: (context) {
+                  // PieChartSectionData 리스트 생성
+                  final List<PieChartSectionData> subjectPieData = monthlySubjectTotals.entries
+                      .where((entry) => entry.value > 0)
+                      .map((entry) {
+                        return PieChartSectionData(
+                          value: entry.value, title: '',
+                          color: subjectColors[entry.key] ?? Colors.grey, radius: 20,
+                        );
+                      }).toList();
+
+                  return _buildPieChartWithLegend( // 함수 호출
+                    subjectPieData, monthlySubjectTotals, subjectColors, monthTotalStudySeconds
+                  );
+                }
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // --- 카드 5: 공부 / 휴식 비율 ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const Text('공부 / 휴식 비율', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+               Builder( // Builder 추가
+                builder: (context) {
+                  final double totalSeconds = monthTotalStudySeconds + monthTotalBreakSeconds;
+                  final primaryColor = Theme.of(context).colorScheme.primary;
+
+                  // PieChartSectionData 리스트 생성
+                  final List<PieChartSectionData> studyBreakPieData = (totalSeconds > 0) ? [
+                    PieChartSectionData( value: monthTotalStudySeconds, title: '', color: primaryColor, radius: 20 ),
+                    PieChartSectionData( value: monthTotalBreakSeconds, title: '', color: Colors.grey.shade400, radius: 20 ),
+                  ] : <PieChartSectionData>[];
+
+                  return _buildPieChartWithLegend( // 함수 호출
+                    studyBreakPieData,
+                    {'공부': monthTotalStudySeconds, '휴식': monthTotalBreakSeconds},
+                    {'공부': primaryColor, '휴식': Colors.grey.shade400},
+                    totalSeconds
+                  );
+                }
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // --- 카드 6: 일별 공부 시간 (과목별 누적 막대) ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const Text('일별 공부 시간', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              // 누적 막대 차트 호출 (isWeekly: false)
+              _buildStackedBarChart(dailySubjectSeconds, subjectColors, subjects, false),
+              const SizedBox(height: 16),
+              _buildChartLegend(subjectColors, subjectsWithData), // 범례
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // --- 카드 7: 공부 시간 누적 ---
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const Text('공부시간 누적', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              // 누적 영역 차트 호출 (isWeekly: false)
+              _buildCumulativeAreaChart(dailySubjectSeconds, subjectColors, subjects, false),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+  
+
 
   // --- 공통 위젯 빌더 ---
 
@@ -817,8 +1162,8 @@ Widget _buildMonthlyView(List<StudySession> sessions) {
                   title,
                   const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   children: [
-                    TextSpan(text: thisWeekStr, style: TextStyle(color: Theme.of(context).primaryColor)),
-                    TextSpan(text: lastWeekStr, style: TextStyle(color: Colors.grey.shade400)),
+                    TextSpan(text: thisWeekStr, style: TextStyle(color: Colors.grey.shade300)),
+                    TextSpan(text: lastWeekStr, style: TextStyle(color: Colors.grey.shade600)),
                   ]
                 );
               },
@@ -904,66 +1249,89 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
 
   // 비율 도넛 차트 (공부/휴식, 과목별 공통 사용)
   Widget _buildRatioPieChart(double value1, double value2, Map<String, Color> colorMap, String bottomText, {Map<String, double>? dataMapOverride}) {
-      final dataMap = dataMapOverride ?? {'_value1': value1, '_value2': value2};
-      final totalValue = dataMap.values.fold<double>(0.0, (sum, item) => sum + item);
-      if (totalValue <= 0) return const SizedBox(height: 150, child: Center(child: Text('데이터 없음')));
+    
+    final dataMap = dataMapOverride ?? {'_value1': value1, '_value2': value2};
+    final totalValue = dataMap.values.fold<double>(0.0, (sum, item) => sum + item);
+    if (totalValue <= 0) return const SizedBox(height: 150, child: Center(child: Text('데이터 없음')));
 
-      final sections = dataMap.entries.map((entry) {
-         final percentage = totalValue > 0 ? (entry.value / totalValue * 100) : 0;
-         return PieChartSectionData(
-           value: entry.value,
-           title: '${percentage.toStringAsFixed(0)}%',
-           color: colorMap[entry.key] ?? Colors.grey,
-           radius: 35,
-           titleStyle: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-         );
-      }).toList();
-
-      if (totalValue == 0) return const SizedBox(height: 150, child: Center(child: Text('데이터 없음')));
-
-      return Row(
-        children: [
-          SizedBox(
-            width: 100,
-            height: 100,
-            child: PieChart(
-              PieChartData(
-                sections: sections,
-                centerSpaceRadius: 30, // 도넛 모양
-                sectionsSpace: 2,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ...dataMap.entries.map((entry) {
-                  final percentage = totalValue > 0 ? (entry.value / totalValue * 100) : 0;
-                  final displayName = entry.key == '_value1' ? '공부' : (entry.key == '_value2' ? '휴식' : entry.key);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      children: [
-                        Container(width: 12, height: 12, color: colorMap[entry.key] ?? Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(displayName, style: Theme.of(context).textTheme.bodySmall),
-                        const Spacer(),
-                        Text('${formatHourMinute(entry.value)} (${percentage.toStringAsFixed(0)}%)', style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                if (bottomText.isNotEmpty) ...[
-                  const Divider(height: 16),
-                  Text(bottomText, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
-                ]
-              ],
-            ),
-          ),
-        ],
+    final sections = dataMap.entries.map((entry) {
+      return PieChartSectionData(
+        value: entry.value,
+        title: '',
+        color: colorMap[entry.key] ?? Colors.grey,
+        radius: 20,
       );
+    }).toList();
+
+    if (totalValue == 0) return const SizedBox(height: 150, child: Center(child: Text('데이터 없음')));
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          height: 100,
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              centerSpaceRadius: 45, // 도넛 모양
+              sectionsSpace: 2,
+              startDegreeOffset: -90, 
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            children: [
+              ...dataMap.entries.map((entry) {
+                final percentage = totalValue > 0 ? (entry.value / totalValue * 100) : 0;
+                final displayName = entry.key == '_value1' ? '공부' : (entry.key == '_value2' ? '휴식' : entry.key);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    children: [
+                      Container(width: 12, height: 12, color: colorMap[entry.key] ?? Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(displayName, style: Theme.of(context).textTheme.bodySmall),
+                      const Spacer(),
+                      Text('${formatHourMinute(entry.value)} (${percentage.toStringAsFixed(0)}%)', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                );
+              }).toList(),
+              if (bottomText.isNotEmpty) ...[
+                const Divider(height: 16),
+                Text(bottomText, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+              ]
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthlyCalendarNavigator() {
+     final year = _selectedDate.year;
+     final month = _selectedDate.month;
+     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(LucideIcons.chevronLeft),
+          // 이전 달로 이동 (setState 호출)
+          onPressed: () => setState(() => _selectedDate = DateTime(year, month - 1, 1)),
+        ),
+        Text(
+          '${year}년 ${month}월', // 년/월 표시
+          style: Theme.of(context).textTheme.titleMedium, // 테마 스타일 적용
+        ),
+        IconButton(
+          icon: const Icon(LucideIcons.chevronRight),
+          // 다음 달로 이동 (setState 호출)
+           onPressed: () => setState(() => _selectedDate = DateTime(year, month + 1, 1)),
+        ),
+      ],
+    );
   }
 
   // 과목별 누적 막대 차트 (주간/월간 공통 사용)
@@ -1088,7 +1456,7 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
           lineBarsData: [
             LineChartBarData(
               spots: spots,
-              isCurved: true,
+              isCurved: false,
               color: Theme.of(context).primaryColor,
               barWidth: 2,
               isStrokeCapRound: true,
@@ -1097,7 +1465,7 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.5),
+                    Theme.of(context).primaryColor.withOpacity(0.3),
                     Theme.of(context).primaryColor.withOpacity(0.0),
                   ],
                   begin: Alignment.topCenter,
@@ -1245,12 +1613,35 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
                       boxShadow: isSelected ? [BoxShadow(color: Theme.of(context).primaryColor.withOpacity(0.5), blurRadius: 3)] : null,
                     ),
                     child: Center(
-                      child: Text(
-                        day.toString(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: studyHours > 4 ? Colors.white : Theme.of(context).textTheme.bodySmall?.color
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            day.toString(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: studyHours > 4
+                                  ? Colors.white
+                                  : Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color,
+                            ),
+                          ),
+                          if (studyHours > 0) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              formatHourMinute(studySeconds),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: studyHours > 4
+                                    ? Colors.white.withOpacity(0.8)
+                                    : Colors.grey.shade600,
+                              ),
+                            )
+                          ]
+                        ],
                       ),
                     ),
                   ),
@@ -1263,51 +1654,8 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
     );
   }
 
-  // 주간 탭의 네비게이터 (주 이동)
-  Widget _buildWeeklyCalendarNavigator() {
-     final startOfWeek = _selectedDate.subtract(Duration(days: _selectedDate.weekday % 7));
-     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(LucideIcons.chevronLeft),
-          onPressed: () => setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 7))),
-        ),
-        Text(
-          '${DateFormat('M/d', 'ko_KR').format(startOfWeek)} - ${DateFormat('M/d', 'ko_KR').format(endOfWeek)}',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        IconButton(
-          icon: const Icon(LucideIcons.chevronRight),
-          onPressed: () => setState(() => _selectedDate = _selectedDate.add(const Duration(days: 7))),
-        ),
-      ],
-    );
-  }
-
   // 월간 탭의 네비게이터 (월 이동)
-  Widget _buildMonthlyCalendarNavigator() {
-     final year = _selectedDate.year;
-     final month = _selectedDate.month;
-     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(LucideIcons.chevronLeft),
-          onPressed: () => setState(() => _selectedDate = DateTime(year, month - 1, 1)),
-        ),
-        Text(
-          '${year}년 ${month}월',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        IconButton(
-          icon: const Icon(LucideIcons.chevronRight),
-           onPressed: () => setState(() => _selectedDate = DateTime(year, month + 1, 1)),
-        ),
-      ],
-    );
-  }
+  
 
   // 차트 범례 위젯
   Widget _buildChartLegend(Map<String, Color> subjectColors, List<Subject> subjects) {
@@ -1400,48 +1748,58 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
 
   // 파이 차트와 범례 위젯
   Widget _buildPieChartWithLegend(List<PieChartSectionData> sections, Map<String, double> dataMap, Map<String, Color> colorMap, double totalValue) {
-      if (sections.isEmpty) return const SizedBox(height: 100, child: Center(child: Text('데이터 없음')));
+    if (sections.isEmpty) return const SizedBox(height: 100, child: Center(child: Text('데이터 없음')));
     
-      return Row(
-        children: [
-          SizedBox(
-            width: 100,
-            height: 100,
-            child: PieChart(
-              PieChartData(
-                sections: sections,
-                centerSpaceRadius: 25,
-                sectionsSpace: 2,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: dataMap.entries.map((entry) {
-                final percentage = totalValue > 0 ? (entry.value / totalValue * 100) : 0;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      Container(width: 12, height: 12, color: colorMap[entry.key] ?? Colors.grey),
-                      const SizedBox(width: 8),
-                      Text(entry.key, style: Theme.of(context).textTheme.bodySmall),
-                      const Spacer(),
-                      Text('${formatHourMinute(entry.value)} (${percentage.toStringAsFixed(0)}%)', style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
+    final newSections = sections.map((s) {
+      return s.copyWith(
+        title: '',
+        radius: 20,
       );
+    }).toList();
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          height: 100,
+          child: PieChart(
+            PieChartData(
+              sections: newSections,
+              centerSpaceRadius: 45,
+              sectionsSpace: 0,
+              startDegreeOffset: -90,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: dataMap.entries.map((entry) {
+              final percentage = totalValue > 0 ? (entry.value / totalValue * 100) : 0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    Container(width: 12, height: 12, color: colorMap[entry.key] ?? Colors.grey),
+                    const SizedBox(width: 8),
+                    Text(entry.key, style: Theme.of(context).textTheme.bodySmall),
+                    const Spacer(),
+                    Text('${formatHourMinute(entry.value)} (${percentage.toStringAsFixed(0)}%)', style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
   }
 
   // 시간대별 타임라인 바
   Widget _buildHourlyTimeline(List<StudySession> sessions, List<Subject> subjects) {
+
+    final subjectColors = getSubjectColors(context);
     // 0시부터 23시까지
     return Column(
       children: List.generate(24, (hour) {
@@ -1449,50 +1807,74 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
         List<Map<String, dynamic>> hourSegments = [];
         for (var session in sessions) {
           final start = session.startTime;
-          final end = session.endTime ?? start.add(Duration(seconds: session.studyDuration));
-          
+          final end = session.endTime ?? start;
+
+          final isBreak = session.intervalType == 'BREAK';
+          final duration = isBreak ? session.breakDuration : session.studyDuration;
+
+          if (duration <= 0) continue;
+
+          final subject = subjects.firstWhere((s) => s.id == session.subjectId, orElse: () => subjects.first);
+
+        //    맵에서 색상을 찾습니다.
+          final color = isBreak
+              ? Colors.grey.shade400 // 휴식: 회색
+              : subjectColors[subject.name] ?? Theme.of(context).colorScheme.primary; // 공부: 맵에서 찾은 색상
           final sessionStartHour = start.hour;
-          final sessionEndHour = end.minute == 0 && end.second == 0 ? end.hour -1 : end.hour; // 14:00 종료는 13시 칸에 포함
+          final sessionEndHour = (end.minute == 0 && end.second == 0 && end.hour > start.hour) 
+                             ? end.hour - 1 // 11:00 정각 종료는 10시 칸까지
+                             : end.hour;    // 11:10 종료는 11시 칸까지
 
           if (hour >= sessionStartHour && hour <= sessionEndHour) {
-            final subject = subjects.firstWhere((s) => s.id == session.subjectId);
             // 이 시간 내에서의 시작 분, 종료 분 계산
             int startMinute = (hour == sessionStartHour) ? start.minute : 0;
             int endMinute = (hour == sessionEndHour) ? end.minute : 60;
-            if(endMinute == 0 && hour == sessionEndHour) endMinute = 60; // 14:00 종료 시 13시 칸 채우기
+            if (startMinute >= endMinute) continue;
+            if (hour == sessionEndHour && end.minute == 0 && end.second == 0) endMinute = 0;
+
+            // [!] 11:00 정각 종료 시 endMinute이 0이므로, 10시 칸(hour=10)은 60으로 설정
+            if (hour == sessionStartHour && hour < sessionEndHour && end.minute == 0 && end.second == 0) endMinute = 60;
+
+            if (startMinute >= endMinute && !(startMinute == 0 && endMinute == 0)) continue;
 
             hourSegments.add({
               'start': startMinute,
               'end': endMinute,
-              'color': subject.color,
+              'color': color,
             });
           }
         }
+
+        hourSegments.sort((a, b) => a['start'].compareTo(b['start']));
         
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2.0),
           child: Row(
             children: [
-              SizedBox(width: 25, child: Text('${hour}', style: Theme.of(context).textTheme.bodySmall)),
+              SizedBox(width: 25, child: Text('$hour', style: Theme.of(context).textTheme.bodySmall)),
               Expanded(
                 child: Container(
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(2),
+                    border: Border.all(color: Theme.of(context).scaffoldBackgroundColor),
                   ),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return Stack(
                         children: hourSegments.map((segment) {
-                          final leftPersent = segment['start'] / 60.0;
-                          final widthPersent = (segment['end'] - segment['start']) / 60.0;
+                          final leftPercent = segment['start'] / 60.0;
+                          final widthPercent = (segment['end'] - segment['start']) / 60.0;
+                          if (widthPercent <= 0) return const SizedBox.shrink();
                           return Positioned(
-                            left: constraints.maxWidth * leftPersent,
-                            width: constraints.maxWidth * widthPersent,
+                            left: constraints.maxWidth * leftPercent,
+                            width: constraints.maxWidth * widthPercent,
                             top: 0,
                             bottom: 0,
-                            child: Container(color: segment['color'].withOpacity(0.7)),
+                            child: Container(
+                              color: segment['color'],
+                            )
                           );
                         }).toList(),
                       );
@@ -1510,9 +1892,24 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
   // 타임라인 리스트 아이템
   Widget _buildTimelineListItem(StudySession session, List<Subject> subjects) {
     final start = session.startTime;
-    final end = session.endTime ?? start.add(Duration(seconds: session.studyDuration));
-    final subject = subjects.firstWhere((s) => s.id == session.subjectId);
-    final studyDuration = session.studyDuration.toDouble();
+    final end = session.endTime ?? start;
+
+    final bool isBreak = session.intervalType == 'BREAK';
+
+    final subject = isBreak
+        ? Subject(
+            // id: null, // 임시 객체이므로 서버 id는 없음
+            name: '휴식',
+            color: Colors.grey.shade400,
+            serverId: '--' // [!] serverId 추가 (임의의 값)
+          )
+        : subjects.firstWhere(
+            // [!] s.id 대신 s.serverId 와 비교
+            (s) => s.serverId == session.subjectId,
+            // 못 찾을 경우 기본값
+            orElse: () => Subject(id: null, name: '삭제된 과목?', color: Colors.grey, serverId: session.subjectId)
+          );
+        final duration = (isBreak ? session.breakDuration : session.studyDuration).toDouble();
     // TODO: Expandable 기능 추가 필요
 
     return Container(
@@ -1530,7 +1927,7 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(subject.name, style: Theme.of(context).textTheme.bodyMedium),
-                  Text('${formatHourMinute(studyDuration)} (${DateFormat('a h:mm', 'ko_KR').format(start)} - ${DateFormat('a h:mm', 'ko_KR').format(end)})', style: Theme.of(context).textTheme.bodySmall),
+                  Text('${formatHourMinute(duration)} (${DateFormat('a h:mm', 'ko_KR').format(start)} - ${DateFormat('a h:mm', 'ko_KR').format(end)})', style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ]
@@ -1541,9 +1938,5 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
          },
       )
     );
-  }
-
-  Widget _buildPlaceholderView(String title) {
-    return Center(child: Text('$title 통계 구현 예정'));
   }
 }

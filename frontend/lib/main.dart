@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:stardylog/screens/login_screen.dart';
 import 'package:stardylog/screens/set_display_name_screen.dart';
+import 'package:stardylog/utils/theme.dart';
 import 'firebase_options.dart';
 import 'routes/app_router.dart';
 import 'providers/auth_provider.dart';
@@ -56,7 +57,9 @@ class StardylogApp extends StatelessWidget {
         return MaterialApp(
           title: 'stardylog',
           debugShowCheckedModeBanner: false,
-          theme: settings.isDarkMode ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true),
+          theme: lightTheme, 
+          darkTheme: darkTheme, 
+          themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
           // ### 로그인 상태에 따라 첫 화면 결정 ###
           home: const AuthWrapper(),
           onGenerateRoute: AppRouter.onGenerateRoute,

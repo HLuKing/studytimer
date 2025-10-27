@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
@@ -51,7 +52,7 @@ class _StudyTrackerScreenState extends State<StudyTrackerScreen> {
   static const double _timeColWidth = 50.0;
 
   DateTime _selectedDate = DateTime.now();
-  String _selectedSubjectId = '1';
+  int? _selectedSubjectId;
   Timer? _timer;
   Duration _currentLapDuration = Duration.zero;
 
@@ -69,13 +70,19 @@ class _StudyTrackerScreenState extends State<StudyTrackerScreen> {
     _headerHorizontalScrollController = ScrollController();
     _horizontalControllers.add(_bodyHorizontalScrollController);
     _horizontalControllers.add(_headerHorizontalScrollController);
-    final studyProvider = Provider.of<StudyProvider>(context, listen: false);
-    if (studyProvider.subjects.isNotEmpty) {
-      _selectedSubjectId = studyProvider.subjects.first.id;
-    }
-    _startUiTimer();
-    // 앱 실행 시 현재 시간으로 자동 스크롤
+
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final studyProvider = Provider.of<StudyProvider>(context, listen: false);
+      if (studyProvider.subjects.isNotEmpty && _selectedSubjectId == null) {
+        // 첫 번째 과목의 서버 ID (int?) 를 기본값으로 설정
+        setState(() {
+           _selectedSubjectId = studyProvider.subjects.first.id;
+        });
+      }
+      _startUiTimer(); // 타이머 시작은 Provider 접근 후에
+
+      // 현재 시간으로 자동 스크롤
       if (_verticalScrollController.hasClients) {
         final now = DateTime.now();
         _verticalScrollController.jumpTo(
@@ -95,6 +102,7 @@ class _StudyTrackerScreenState extends State<StudyTrackerScreen> {
   }
 
   void _startUiTimer() {
+    _timer?.cancel(); // 기존 타이머가 있으면 취소
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final studyProvider = context.read<StudyProvider>();
       if (studyProvider.currentSession != null && studyProvider.lapStartTime != null) {
@@ -140,9 +148,14 @@ class _StudyTrackerScreenState extends State<StudyTrackerScreen> {
     final authProvider = context.watch<AuthProvider>();
     final studyProvider = context.watch<StudyProvider>();
     final subjects = studyProvider.subjects;
-    final Subject selectedSubject =
-        subjects.firstWhere((s) => s.id == _selectedSubjectId, orElse: () => subjects.first);
-   
+
+    final Subject selectedSubject = _selectedSubjectId == null || subjects.isEmpty
+      ? Subject(id: null, name: '과목 없음', color: Colors.grey, serverId: '') // 기본값
+      : subjects.firstWhere(
+          (s) => s.id == _selectedSubjectId, // int? 끼리 비교
+          orElse: () => subjects.isNotEmpty ? subjects.first : Subject(id: null, name: '과목 없음', color: Colors.grey, serverId: '') // 못 찾을 경우 대비
+        );
+
     // 랩타임 리스트가 업데이트될 때마다 맨 아래로 스크롤
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_lapScrollController.hasClients && _lapScrollController.position.hasContentDimensions) {
@@ -182,12 +195,22 @@ class _StudyTrackerScreenState extends State<StudyTrackerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildWeekCalendarHeader(),
-            // ### 2. 타임라인이 남은 공간을 모두 차지하도록 Expanded로 감싸기 ###
             Expanded(
-              child: _buildTimelineView(),
+              child: Card(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    _buildWeekCalendarHeader(),
+                    Expanded(
+                      child: _buildTimelineView(),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            // ### 3. 컨트롤 바를 Column의 마지막 자식으로 배치 ###
+            
+            // 선택된 Subject 객체를 컨트롤 바에 전달
             _buildControlBar(studyProvider, selectedSubject),
           ],
         ),
@@ -346,13 +369,15 @@ Widget _buildTimelineView() {
 
   Widget _buildSessionBlock(StudySession session, double hourHeight, List<Subject> subjects,
       {bool isCurrent = false}) {
+    final subject = subjects.firstWhere(
+        (s) => s.serverId == session.subjectId,
+        orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId) // 못 찾을 경우 대비
+     );
+
     final start = session.startTime;
     final end = isCurrent ? DateTime.now() : session.endTime!;
-    final subject = subjects.firstWhere((s) => s.id == session.subjectId, orElse: () => subjects.first);
-
     final top = (start.hour + start.minute / 60.0) * hourHeight;
     final height = end.difference(start).inMinutes / 60.0 * hourHeight;
-
     if (height <= 0) return const SizedBox.shrink();
 
     return Positioned(
@@ -413,7 +438,7 @@ Widget _buildTimelineView() {
         child: Column(
           children: [
             if (provider.currentSession != null) _buildLapTimeList(provider, provider.subjects),
-            if (provider.currentSession != null) _buildTimerDisplay(provider, selectedSubject),
+            if (provider.currentSession != null) _buildTimerDisplay(provider, selectedSubject), // selectedSubject 전달
             Row(
               children: [
                 Expanded(
@@ -428,6 +453,7 @@ Widget _buildTimelineView() {
                       children: [
                         CircleAvatar(backgroundColor: selectedSubject.color, radius: 8),
                         const SizedBox(width: 8),
+                        // [!] selectedSubject.name 사용
                         Text(selectedSubject.name),
                         const Icon(LucideIcons.chevronUp, size: 16),
                       ],
@@ -506,7 +532,7 @@ Widget _buildTimelineView() {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -539,7 +565,10 @@ Widget _buildTimelineView() {
         itemCount: provider.lapTimes.length,
         itemBuilder: (context, index) {
           final lap = provider.lapTimes[index];
-          final subject = subjects.firstWhere((s) => s.id == lap.subjectId);
+          final subject = subjects.firstWhere(
+            (s) => s.serverId == lap.subjectId,
+            orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: lap.subjectId) // 못 찾을 경우 대비
+          );
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Row(
@@ -567,7 +596,7 @@ Widget _buildTimelineView() {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext sheetContext) {
-        final studyProvider = Provider.of<StudyProvider>(context, listen: false);
+        final studyProvider = Provider.of<StudyProvider>(context);
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.6,
@@ -600,19 +629,43 @@ Widget _buildTimelineView() {
                               ),
                             IconButton(
                               icon: const Icon(LucideIcons.trash2, color: Colors.red, size: 20),
-                              onPressed: () {
-                                if (studyProvider.subjects.length > 1) {
-                                  studyProvider.deleteSubject(subject.id);
-                                  if (_selectedSubjectId == subject.id) {
-                                    _selectedSubjectId = studyProvider.subjects.first.id;
+                              onPressed: () async { // [!] async 추가
+                                // [!] subject.id 가 null 이 아닌지 확인 후 deleteSubject 호출
+                                if (subject.id != null && studyProvider.subjects.length > 1) {
+                                  try {
+                                    await studyProvider.deleteSubject(subject.id!); // await 사용
+                                    // 삭제 후 선택된 ID 재설정 (삭제된 ID와 같았다면)
+                                    if (_selectedSubjectId == subject.id) {
+                                      // listen: false 로 Provider 다시 가져와서 사용
+                                      final latestSubjects = Provider.of<StudyProvider>(context, listen: false).subjects;
+                                      setState(() {
+                                         _selectedSubjectId = latestSubjects.isNotEmpty ? latestSubjects.first.id : null;
+                                      });
+                                    }
+                                    // 시트 닫기 불필요 (Provider가 업데이트하면 자동으로 리빌드됨)
+                                    // Navigator.pop(sheetContext); // 삭제
+                                  } catch (e) {
+                                     // TODO: 사용자에게 삭제 실패 알림
+                                     print("삭제 실패 UI 알림 필요: $e");
+                                     if(mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('과목 삭제 실패: $e'), backgroundColor: Colors.red)
+                                        );
+                                     }
                                   }
-                                  setState(() {}); // Rebuild sheet
+                                } else if (studyProvider.subjects.length <= 1) {
+                                     if(mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('최소 1개의 과목이 필요합니다.'), backgroundColor: Colors.orange)
+                                        );
+                                     }
                                 }
                               },
                             )
                           ],
                         ),
                         onTap: () {
+                          // [!] setState로 _selectedSubjectId (int?) 업데이트
                           setState(() {
                             _selectedSubjectId = subject.id;
                           });
@@ -628,7 +681,7 @@ Widget _buildTimelineView() {
                   title: const Text('새 과목 추가'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _showAddSubjectDialog(context);
+                    _showAddSubjectDialog(context); // 새 과목 추가 다이얼로그 호출
                   },
                 )
               ],
@@ -641,30 +694,73 @@ Widget _buildTimelineView() {
 
   void _showAddSubjectDialog(BuildContext context) {
     final nameController = TextEditingController();
+    Color selectedColor = Colors.primaries[Random().nextInt(Colors.primaries.length)]; // 랜덤 색상
     showDialog(
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
-            title: const Text('새 과목 추가'),
-            content: TextField(controller: nameController, decoration: const InputDecoration(hintText: "예: 물리학")),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('취소')),
-              ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      final studyProvider = Provider.of<StudyProvider>(context, listen: false);
-                      final newSubject = Subject(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: nameController.text,
-                        color: Colors.primaries[studyProvider.subjects.length % Colors.primaries.length],
-                      );
-                      studyProvider.addSubject(newSubject);
-                    }
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('추가')),
-            ],
-          );
-        });
+          title: const Text('새 과목 추가'),
+          content: StatefulBuilder( // 색상 변경 UI를 위해 StatefulBuilder 사용
+            builder: (context, setStateInDialog) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(hintText: "예: 물리학")
+                  ),
+                  const SizedBox(height: 16),
+                  // 색상 선택 UI (간단 버전: 버튼 클릭 시 랜덤 변경)
+                  Row(
+                    children: [
+                      const Text("색상: "),
+                      GestureDetector(
+                        onTap: () {
+                          setStateInDialog(() { // 다이얼로그 내부 상태만 변경
+                            selectedColor = Colors.primaries[Random().nextInt(Colors.primaries.length)];
+                          });
+                        },
+                        child: CircleAvatar(backgroundColor: selectedColor, radius: 12),
+                      ),
+                       const SizedBox(width: 8),
+                       TextButton(onPressed: () {
+                          setStateInDialog(() {
+                            selectedColor = Colors.primaries[Random().nextInt(Colors.primaries.length)];
+                          });
+                       }, child: const Text("변경"))
+                    ],
+                  )
+                ],
+              );
+            }
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('취소')),
+            ElevatedButton(
+              onPressed: () async { // [!] async 추가
+                if (nameController.text.isNotEmpty) {
+                  // [!] listen: false 로 Provider 가져와서 addSubject 호출
+                  final studyProvider = Provider.of<StudyProvider>(context, listen: false);
+                  try {
+                    await studyProvider.addSubject(nameController.text, selectedColor); // await 사용
+                     if(mounted) Navigator.pop(dialogContext); // 성공 시 닫기
+                  } catch (e) {
+                     // TODO: 사용자에게 추가 실패 알림
+                     print("추가 실패 UI 알림 필요: $e");
+                     if(mounted) {
+                        Navigator.pop(dialogContext); // 일단 닫고
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('과목 추가 실패: $e'), backgroundColor: Colors.red)
+                        );
+                     }
+                  }
+                }
+              },
+              child: const Text('추가')
+            ),
+          ],
+        );
+      }
+    );
   }
 }
