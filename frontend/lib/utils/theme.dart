@@ -20,6 +20,7 @@ final ThemeData lightTheme = ThemeData(
     onPrimary: Colors.white,
     secondary: Colors.grey.shade200,  // 휴식 시간 등 보조색
     onSecondary: Colors.black,
+    surface: const Color(0xFFFFFFFF),       // AppBar 배경색
   ),
   
   appBarTheme: const AppBarTheme(
@@ -46,6 +47,27 @@ final ThemeData lightTheme = ThemeData(
     ),
   ),
 
+  dialogTheme: DialogThemeData(
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12.0),
+      side: BorderSide(color: Colors.grey.shade200, width: 1),
+    ),
+  ),
+
+  bottomSheetTheme: BottomSheetThemeData(
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.white, 
+    modalBackgroundColor: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)), 
+      side: BorderSide(color: Colors.grey.shade200, width: 1), // 카드와 동일한 테두리
+    ),
+  ),
+
   // 5. 하단 네비게이션 바 테마
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     backgroundColor: Colors.white,
@@ -60,7 +82,44 @@ final ThemeData lightTheme = ThemeData(
     unselectedLabelColor: Colors.grey, // 비선택 탭: 회색
     indicatorColor: const Color(0xFF030213), // 하단 밑줄: 검은색
   ),
+
+  // 9. ElevatedButton 스타일 추가 ("시작", "추가" 버튼)
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color.fromARGB(255, 0, 166, 255), // [!] 주조색 (검은색)
+      foregroundColor: Colors.white, // [!] 글자/아이콘 (흰색)
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0), // [!] 둥근 모서리
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20), // [!] 기본 패딩
+    ),
+  ),
+
+  // 10. OutlinedButton 스타일 추가 ("과목 선택" 버튼)
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: const Color(0xFF030213), // [!] 글자/아이콘 (검은색)
+      side: BorderSide(color: Colors.grey.shade300, width: 1), // [!] 테두리색
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0), // [!] 둥근 모서리
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20), // [!] 기본 패딩
+    ),
+  ),
+  
+  // 11. TextButton 스타일 추가 ("취소" 버튼)
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: const Color(0xFF030213), // [!] 글자색 (검은색)
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0), // [!] 둥근 모서리
+      ),
+    ),
+  ),
 );
+
+
+
 
 // 다크 테마
 final ThemeData darkTheme = ThemeData(

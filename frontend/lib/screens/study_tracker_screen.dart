@@ -369,11 +369,24 @@ Widget _buildTimelineView() {
 
   Widget _buildSessionBlock(StudySession session, double hourHeight, List<Subject> subjects,
       {bool isCurrent = false}) {
-    final subject = subjects.firstWhere(
-        (s) => s.serverId == session.subjectId,
-        orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId) // 못 찾을 경우 대비
-     );
 
+    final bool isBreak = session.intervalType == 'BREAK';
+    Color blockColor;
+    String blockText;
+
+    if (isBreak) {
+      //  2. 휴식 시간일 경우
+      blockColor = Colors.grey.shade400; // 회색
+      blockText = "휴식"; // "휴식" 텍스트
+    } else {
+      //  3. 공부 시간일 경우 (기존 로직)
+      final subject = subjects.firstWhere(
+          (s) => s.serverId == session.subjectId,
+          orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId)
+       );
+      blockColor = subject.color;
+      blockText = subject.name;
+    }
     final start = session.startTime;
     final end = isCurrent ? DateTime.now() : session.endTime!;
     final top = (start.hour + start.minute / 60.0) * hourHeight;
@@ -388,11 +401,11 @@ Widget _buildTimelineView() {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: subject.color,
+          color: blockColor,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          '${subject.name}\n${_formatTotalDuration(end.difference(start))}',
+          '${blockText}\n${_formatTotalDuration(end.difference(start))}',
           style: const TextStyle(color: Colors.white, fontSize: 10),
           overflow: TextOverflow.ellipsis,
         ),
@@ -453,7 +466,7 @@ Widget _buildTimelineView() {
                       children: [
                         CircleAvatar(backgroundColor: selectedSubject.color, radius: 8),
                         const SizedBox(width: 8),
-                        // [!] selectedSubject.name 사용
+                        // selectedSubject.name 사용
                         Text(selectedSubject.name),
                         const Icon(LucideIcons.chevronUp, size: 16),
                       ],
@@ -592,9 +605,6 @@ Widget _buildTimelineView() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (BuildContext sheetContext) {
         final studyProvider = Provider.of<StudyProvider>(context);
         return DraggableScrollableSheet(
@@ -629,8 +639,8 @@ Widget _buildTimelineView() {
                               ),
                             IconButton(
                               icon: const Icon(LucideIcons.trash2, color: Colors.red, size: 20),
-                              onPressed: () async { // [!] async 추가
-                                // [!] subject.id 가 null 이 아닌지 확인 후 deleteSubject 호출
+                              onPressed: () async { // async 추가
+                                // subject.id 가 null 이 아닌지 확인 후 deleteSubject 호출
                                 if (subject.id != null && studyProvider.subjects.length > 1) {
                                   try {
                                     await studyProvider.deleteSubject(subject.id!); // await 사용
@@ -665,7 +675,7 @@ Widget _buildTimelineView() {
                           ],
                         ),
                         onTap: () {
-                          // [!] setState로 _selectedSubjectId (int?) 업데이트
+                          // setState로 _selectedSubjectId (int?) 업데이트
                           setState(() {
                             _selectedSubjectId = subject.id;
                           });
@@ -695,19 +705,57 @@ Widget _buildTimelineView() {
   void _showAddSubjectDialog(BuildContext context) {
     final nameController = TextEditingController();
     Color selectedColor = Colors.primaries[Random().nextInt(Colors.primaries.length)]; // 랜덤 색상
+
+    final studyProvider = Provider.of<StudyProvider>(context, listen: false);
+    String? _errorText;
+
     showDialog(
         context: context,
         builder: (dialogContext) {
-          return AlertDialog(
-          title: const Text('새 과목 추가'),
-          content: StatefulBuilder( // 색상 변경 UI를 위해 StatefulBuilder 사용
+          return StatefulBuilder(
             builder: (context, setStateInDialog) {
-              return Column(
+              return AlertDialog(
+              title: const Text('새 과목 추가'),
+              content: Column( // 색상 변경 UI를 위해 StatefulBuilder 사용
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(hintText: "예: 물리학")
+                    decoration: InputDecoration(
+                      hintText: "예: 물리학",
+                      errorText: _errorText,
+                      errorStyle: const TextStyle(color: Colors.red),
+                      // 1. 배경색을 칠하도록 설정합니다.
+                        filled: true, 
+                        
+                        // 2. '살짝 회색' 배경색을 지정합니다.
+                        // (더 진하게 하려면 shade200을 사용하세요)
+                        fillColor: Colors.grey.shade100, 
+
+                        // 3. 테두리 스타일을 밑줄 대신 박스(Outline)로 변경합니다.
+                        border: OutlineInputBorder(
+                          // 기본 테두리는 숨깁니다.
+                          borderSide: BorderSide.none, 
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        // 평소에 보일 연한 테두리
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        // 클릭했을 때 보일 테두리
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2.0),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        if(_errorText != null) {
+                        setStateInDialog(() {
+                          _errorText = null; // 입력 시 에러 메시지 초기화
+                        });
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   // 색상 선택 UI (간단 버전: 버튼 클릭 시 랜덤 변경)
@@ -722,44 +770,62 @@ Widget _buildTimelineView() {
                         },
                         child: CircleAvatar(backgroundColor: selectedColor, radius: 12),
                       ),
-                       const SizedBox(width: 8),
-                       TextButton(onPressed: () {
+                      const SizedBox(width: 8),
+                      TextButton(onPressed: () {
                           setStateInDialog(() {
                             selectedColor = Colors.primaries[Random().nextInt(Colors.primaries.length)];
                           });
-                       }, child: const Text("변경"))
+                      }, child: const Text("변경"))
                     ],
                   )
                 ],
-              );
-            }
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('취소')),
-            ElevatedButton(
-              onPressed: () async { // [!] async 추가
-                if (nameController.text.isNotEmpty) {
-                  // [!] listen: false 로 Provider 가져와서 addSubject 호출
-                  final studyProvider = Provider.of<StudyProvider>(context, listen: false);
-                  try {
-                    await studyProvider.addSubject(nameController.text, selectedColor); // await 사용
-                     if(mounted) Navigator.pop(dialogContext); // 성공 시 닫기
-                  } catch (e) {
-                     // TODO: 사용자에게 추가 실패 알림
-                     print("추가 실패 UI 알림 필요: $e");
-                     if(mounted) {
-                        Navigator.pop(dialogContext); // 일단 닫고
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('과목 추가 실패: $e'), backgroundColor: Colors.red)
-                        );
-                     }
-                  }
-                }
-              },
-              child: const Text('추가')
-            ),
-          ],
-        );
+              ),
+              actions: [
+                  TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('취소')),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final subjectName = nameController.text.trim();
+
+                      // 유효성 검사 1: 이름이 비어있는지 확인
+                      if (subjectName.isEmpty) {
+                        setStateInDialog(() {
+                          _errorText = "과목 이름을 입력해주세요";
+                        });
+                        return; // 함수 종료
+                      }
+
+                      // 유효성 검사 2: 이름이 중복되는지 확인 (대소문자 무시)
+                      if (studyProvider.subjects.any((s) => s.name.toLowerCase() == subjectName.toLowerCase())) {
+                        setStateInDialog(() {
+                          _errorText = "이미 등록된 과목입니다";
+                        });
+                        return; // 함수 종료
+                      }
+
+                      // 유효성 검사 통과: 오류 메시지 초기화
+                      setStateInDialog(() {
+                        _errorText = null;
+                      });
+
+                      // 기존 API 호출 로직
+                      try {
+                        await studyProvider.addSubject(subjectName, selectedColor);
+                        if (mounted) Navigator.pop(dialogContext); // 성공 시 닫기
+                      } catch (e) {
+                        print("추가 실패 UI 알림 필요: $e");
+                        if (mounted) {
+                          Navigator.pop(dialogContext); // 일단 닫고
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('과목 추가 실패: $e'), backgroundColor: Colors.red)
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('추가')
+                  ),
+                ],
+            );
+      });
       }
     );
   }

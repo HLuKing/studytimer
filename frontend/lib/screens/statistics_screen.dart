@@ -181,7 +181,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
         lastEndTime = session.endTime;
       }
       
-      final subject = subjects.firstWhere((s) => s.id == session.subjectId, orElse: () => subjects.first);
+      final subject = subjects.firstWhere(
+        (s) => s.serverId == session.subjectId, 
+        orElse: () => subjects.isNotEmpty ? subjects.first : Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId)
+      );
       subjectSeconds[subject.name] = (subjectSeconds[subject.name] ?? 0) + studyDuration;
     }
     
@@ -359,7 +362,10 @@ Widget _buildWeeklyView(List<StudySession> sessions) {
           final studySec = session.studyDuration.toDouble();
           final breakSec = session.breakDuration.toDouble(); // 휴식 시간 가져오기
           final dayIndex = sessionDate.weekday % 7;
-          final subject = subjects.firstWhere((s) => s.id == session.subjectId, orElse: () => subjects.first);
+          final subject = subjects.firstWhere(
+            (s) => s.serverId == session.subjectId, 
+            orElse: () => subjects.isNotEmpty ? subjects.first : Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId)
+          );
 
           totalStudy += studySec;
           totalBreak += breakSec; // 휴식 시간 합산
@@ -860,7 +866,10 @@ Widget _buildMonthlyView(List<StudySession> sessions) {
       currentMonthDailyStudyTotals[dayOfMonth] = (currentMonthDailyStudyTotals[dayOfMonth] ?? 0.0) + studySec;
 
       if (session.intervalType == 'STUDY' && studySec > 0) {
-        final subject = subjects.firstWhere((sub) => sub.id == session.subjectId, orElse: () => subjects.first);
+        final subject = subjects.firstWhere(
+            (s) => s.serverId == session.subjectId, 
+            orElse: () => subjects.isNotEmpty ? subjects.first : Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId)
+          );
         monthlySubjectTotals[subject.name] = (monthlySubjectTotals[subject.name] ?? 0.0) + studySec;
         dailySubjectSeconds[dayOfMonth]![subject.name] = (dailySubjectSeconds[dayOfMonth]![subject.name] ?? 0) + studySec;
       }
@@ -1814,7 +1823,10 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
 
           if (duration <= 0) continue;
 
-          final subject = subjects.firstWhere((s) => s.id == session.subjectId, orElse: () => subjects.first);
+          final subject = subjects.firstWhere(
+            (s) => s.serverId == session.subjectId, 
+            orElse: () => subjects.isNotEmpty ? subjects.first : Subject(id: null, name: '??', color: Colors.grey, serverId: session.subjectId)
+          );
 
         //    맵에서 색상을 찾습니다.
           final color = isBreak
@@ -1832,7 +1844,7 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
             if (startMinute >= endMinute) continue;
             if (hour == sessionEndHour && end.minute == 0 && end.second == 0) endMinute = 0;
 
-            // [!] 11:00 정각 종료 시 endMinute이 0이므로, 10시 칸(hour=10)은 60으로 설정
+            //  11:00 정각 종료 시 endMinute이 0이므로, 10시 칸(hour=10)은 60으로 설정
             if (hour == sessionStartHour && hour < sessionEndHour && end.minute == 0 && end.second == 0) endMinute = 60;
 
             if (startMinute >= endMinute && !(startMinute == 0 && endMinute == 0)) continue;
@@ -1901,10 +1913,10 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
             // id: null, // 임시 객체이므로 서버 id는 없음
             name: '휴식',
             color: Colors.grey.shade400,
-            serverId: '--' // [!] serverId 추가 (임의의 값)
+            serverId: '--' //  serverId 추가 (임의의 값)
           )
         : subjects.firstWhere(
-            // [!] s.id 대신 s.serverId 와 비교
+            //  s.id 대신 s.serverId 와 비교
             (s) => s.serverId == session.subjectId,
             // 못 찾을 경우 기본값
             orElse: () => Subject(id: null, name: '삭제된 과목?', color: Colors.grey, serverId: session.subjectId)
