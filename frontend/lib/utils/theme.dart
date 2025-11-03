@@ -111,6 +111,7 @@ final ThemeData lightTheme = ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       foregroundColor: const Color(0xFF030213), // [!] 글자색 (검은색)
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0), // [!] 둥근 모서리
       ),
