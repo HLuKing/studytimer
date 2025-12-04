@@ -1345,49 +1345,80 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
 
   // 과목별 누적 막대 차트 (주간/월간 공통 사용)
   Widget _buildStackedBarChart(Map<dynamic, Map<String, double>> dailyData, Map<String, Color> subjectColors, List<Subject> subjects, bool isWeekly) {
+    
+    // 1. Y축 최대값 계산 (기존과 동일)
+    double maxY = 0;
+    maxY = dailyData.values.fold<double>(0.0, (prevDayMax, subjectMap) {
+      final dayTotal = subjectMap.values.fold<double>(0.0, (sum, seconds) => sum + (seconds / 3600.0));
+      return max(prevDayMax, dayTotal);
+    });
+    maxY = max(maxY * 1.2, 1.0); 
+
     final barGroups = dailyData.entries.map((entry) {
-      final xValue = entry.key; // 요일 인덱스(0-6) 또는 일자(1-31)
+      final xValue = entry.key; 
       final subjectData = entry.value;
-      final rods = <BarChartRodData>[];
-      double currentY = 0;
+
+      // 2. BarChartRodStackItem 리스트 (기존과 동일)
+      final stackItems = <BarChartRodStackItem>[];
+      
+      double currentY = 0; 
       final sortedSubjects = subjectData.keys.toList()..sort();
 
       for (var subjectName in sortedSubjects) {
         final seconds = subjectData[subjectName]!;
         if (seconds <= 0) continue;
         final hours = seconds / 3600.0;
-        rods.add(BarChartRodData(
-            fromY: currentY, toY: currentY + hours,
-            color: subjectColors[subjectName] ?? Colors.grey,
-            width: isWeekly ? 15 : 8,
-            borderRadius: BorderRadius.zero));
-        currentY += hours;
+
+        // 3. 스택 아이템 추가 (기존과 동일)
+        stackItems.add(BarChartRodStackItem(
+          currentY, // fromY
+          currentY + hours, // toY
+          subjectColors[subjectName] ?? Colors.grey, // color
+        ));
+        
+        currentY += hours; 
       }
-      if (rods.isEmpty) rods.add(BarChartRodData(toY: 0, color: Colors.transparent));
-      return BarChartGroupData(x: xValue is int ? xValue : int.parse(xValue.toString()), barRods: rods);
+
+      // 4. 단일 BarChartRodData 생성 (기존과 동일)
+      final totalRod = BarChartRodData(
+        toY: currentY, 
+        width: isWeekly ? 15 : 8,
+        rodStackItems: stackItems, 
+        borderRadius: BorderRadius.zero,
+        // [!] 터치 감지를 위해 옅은 색상 유지
+        color: Colors.black.withOpacity(0.001), 
+      );
+
+      return BarChartGroupData(
+        x: xValue is int ? xValue : int.parse(xValue.toString()),
+        barRods: [totalRod], 
+      );
     }).toList();
 
-     final maxY = barGroups.fold<double>(0.0, (prev, group) => max(prev, group.barRods.fold<double>(0, (p, r) => p + (r.toY - r.fromY)))) * 1.2;
-
-      return SizedBox(
+    return SizedBox(
       height: 250,
       child: BarChart(
         BarChartData(
-          maxY: max(maxY, 1.0),
-          alignment: BarChartAlignment.spaceAround,
+          maxY: maxY, 
+          alignment: BarChartAlignment.center, 
           barGroups: barGroups,
+          
+          // ... (titlesData, borderData, gridData는 기존과 동일) ...
           titlesData: FlTitlesData(
             bottomTitles: AxisTitles(sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (isWeekly) {
                   final days = ['일', '월', '화', '수', '목', '금', '토'];
-                  return Text(days[value.toInt()], style: const TextStyle(fontSize: 10));
+                  if (value >= 0 && value < days.length) {
+                       return Text(days[value.toInt()], style: const TextStyle(fontSize: 10));
+                  }
+                  return const Text('');
                 } else { // 월간
                   final day = value.toInt();
                   final daysInMonth = dailyData.length;
-                   if (day % 5 == 0 || day == 1 || day == daysInMonth) {
-                     return Text('$day', style: const TextStyle(fontSize: 10));
+                    if (day % 5 == 0 || day == 1 || day == daysInMonth) {
+                      return Text('$day', style: const TextStyle(fontSize: 10));
                   }
                   return const Text('');
                 }
@@ -1407,22 +1438,58 @@ Widget _buildStartEndBarChart(Map<String, dynamic> weekStats) {
           ),
           borderData: FlBorderData(show: false),
           gridData: FlGridData(
-              show: true, drawVerticalLine: false,
-              getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1)
+            show: true, drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade200, strokeWidth: 1)
           ),
-          barTouchData: BarTouchData(touchTooltipData: BarTouchTooltipData(
+          
+          // [!!!] <<<--- 여기가 수정된 부분 --- (START)
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (group) => Colors.black87,
+              
+              // [!] 1. 툴팁 콜백 시그니처를 스택 아이템이 없는 기본형으로 변경합니다.
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                 final subjectName = subjectColors.entries.firstWhere((entry) => entry.value == rod.color, orElse: () => MapEntry('기타', Colors.grey)).key;
-                 final hours = rod.toY - rod.fromY;
-                 final label = isWeekly ? ['일', '월', '화', '수', '목', '금', '토'][group.x.toInt()] : '${group.x.toInt()}일';
-                 return BarTooltipItem(
-                   '$label $subjectName\n',
-                   const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                   children: <TextSpan>[TextSpan(text: formatHourMinute(hours * 3600), style: const TextStyle(color: Colors.white))],
-                 );
+                
+                // [!] 2. 그날의 날짜(xValue)를 가져옵니다.
+                final xValue = group.x.toInt();
+                final label = isWeekly 
+                    ? ['일', '월', '화', '수', '목', '금', '토'][xValue] 
+                    : '${xValue}일';
+
+                // [!] 3. dailyData 맵에서 해당 날짜의 과목 데이터를 가져옵니다.
+                final dayData = dailyData[xValue];
+                if (dayData == null || dayData.isEmpty) {
+                  return null; // 데이터 없으면 툴팁 없음
+                }
+
+                // [!] 4. 과목별 시간 목록을 TextSpan으로 만듭니다.
+                double totalSeconds = 0;
+                final sortedEntries = dayData.entries.toList()
+                  ..sort((a, b) => b.value.compareTo(a.value)); // 시간이 긴 순서대로 정렬
+
+                final children = sortedEntries.map((entry) {
+                  final subjectName = entry.key;
+                  final seconds = entry.value;
+                  totalSeconds += seconds;
+                  return TextSpan(
+                    text: '\n${subjectName}: ${formatHourMinute(seconds)}',
+                    style: TextStyle(
+                      color: subjectColors[subjectName] ?? Colors.white, 
+                      fontSize: 10
+                    ),
+                  );
+                }).toList();
+
+                // [!] 5. 날짜와 총 시간을 제목으로, 과목 목록을 자식으로 반환합니다.
+                return BarTooltipItem(
+                  '$label - 총 ${formatHourMinute(totalSeconds)}\n', 
+                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  children: children,
+                );
               }
-          )),
+            )
+          ),
+          // [!!!] <<<--- 여기까지 수정 --- (END)
         ),
       ),
     );

@@ -98,12 +98,11 @@ final ThemeData lightTheme = ThemeData(
   // 10. OutlinedButton 스타일 추가 ("과목 선택" 버튼)
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
-      foregroundColor: const Color(0xFF030213), // [!] 글자/아이콘 (검은색)
-      side: BorderSide(color: Colors.grey.shade300, width: 1), // [!] 테두리색
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0), // [!] 둥근 모서리
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20), // [!] 기본 패딩
+      backgroundColor: Colors.white, // [!] 이 줄을 추가합니다.
+      foregroundColor: const Color(0xFF030213), // 글자/아이콘 (검은색)
+      side: BorderSide(color: Colors.grey.shade300, width: 1), // 테두리색
+      shape: const StadiumBorder(), // 알약 모양
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20), 
     ),
   ),
   

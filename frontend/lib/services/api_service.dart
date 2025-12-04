@@ -41,7 +41,7 @@ class ApiService {
     } else if (res.statusCode == 409) {
       throw Exception("이미 사용 중인 닉네임입니다.");
     }
-    throw Exception("닉네임 설정 실패: ${res.statusCode}");
+    throw Exception("닉네임 설정 실패: 이미 사용 중인 닉네임입니다.");
   }
 
   static Future<void> saveStudyLaps(List<LapTime> laps, String sessionId, String subjectName) async {

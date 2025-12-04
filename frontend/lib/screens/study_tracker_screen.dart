@@ -434,50 +434,64 @@ Widget _buildTimelineView() {
 
   Widget _buildControlBar(StudyProvider provider, Subject selectedSubject) {
     return Material(
+      // [!] 1. 그림자와 둥근 모서리만 담당하는 부모 Material
       elevation: 10,
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(20),
         topRight: Radius.circular(20),
       ),
+      clipBehavior: Clip.antiAlias,
+      
+      // [!] 2. Material의 자식으로 Container를 추가합니다.
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        
+        // [!] 3. 이 Container가 회색 배경과 상단 테두리(윤곽선)를 가집니다.
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+          color: Colors.white, // 회색 배경
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.shade300, // [!] 요청하신 "조금 더 진한 회색" 윤곽선
+              width: 1.0,
+            ),
           ),
         ),
-        child: Column(
-          children: [
-            if (provider.currentSession != null) _buildLapTimeList(provider, provider.subjects),
-            if (provider.currentSession != null) _buildTimerDisplay(provider, selectedSubject), // selectedSubject 전달
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: provider.currentSession != null ? null : () => _showSubjectSheet(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(backgroundColor: selectedSubject.color, radius: 8),
-                        const SizedBox(width: 8),
-                        // selectedSubject.name 사용
-                        Text(selectedSubject.name),
-                        const Icon(LucideIcons.chevronUp, size: 16),
-                      ],
+        
+        // [!] 4. 기존 내용은 Padding 안에 그대로 둡니다.
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Column(
+            children: [
+              // 랩 타임 리스트 (이 함수는 흰색 카드와 자체 테두리를 반환 - 수정 X)
+              if (provider.currentSession != null)
+                _buildLapTimeList(provider, provider.subjects),
+
+              // 타이머 디스플레이 (이 함수는 배경/테두리 없음 - 수정 X)
+              if (provider.currentSession != null)
+                _buildTimerDisplay(provider, selectedSubject),
+              
+              // 버튼 영역
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton( 
+                      onPressed: provider.currentSession != null ? null : () => _showSubjectSheet(context),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(backgroundColor: selectedSubject.color, radius: 8),
+                          const SizedBox(width: 8),
+                          Text(selectedSubject.name),
+                          const Icon(LucideIcons.chevronUp, size: 16),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                _buildActionButton(provider),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 16),
+                  _buildActionButton(provider),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -541,13 +555,13 @@ Widget _buildTimelineView() {
     final currentStudyTime = provider.isPaused ? totalStudy : totalStudy + _currentLapDuration;
     final currentBreakTime = provider.isPaused ? totalBreak + _currentLapDuration : totalBreak;
 
+    // [!!!] Container에서 decoration (회색 배경)을 제거합니다.
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      // [!] 랩타임 카드(margin bottom 16)와 버튼 로우 사이의 간격
+      margin: const EdgeInsets.only(bottom: 16), 
+      padding: const EdgeInsets.symmetric(vertical: 12), 
+
+      
       child: Column(
         children: [
           Text(
@@ -572,15 +586,27 @@ Widget _buildTimelineView() {
   Widget _buildLapTimeList(StudyProvider provider, List<Subject> subjects) {
     return Container(
       height: 100,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16), // 타이머와의 간격
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+
+      
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor, // [!] 흰색 배경
+        
+        // [!] 사용자가 요청한 "아주 적은 곡선" (예: 8.0)
+        borderRadius: BorderRadius.circular(8.0), 
+        
+        // [!] 메인 카드(회색)와 구별되는 "얇은 회색선 윤곽선"
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
       child: ListView.builder(
-        controller: _lapScrollController, // 스크롤 컨트롤러 연결
+        controller: _lapScrollController,
         itemCount: provider.lapTimes.length,
         itemBuilder: (context, index) {
           final lap = provider.lapTimes[index];
           final subject = subjects.firstWhere(
             (s) => s.serverId == lap.subjectId,
-            orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: lap.subjectId) // 못 찾을 경우 대비
+            orElse: () => Subject(id: null, name: '??', color: Colors.grey, serverId: lap.subjectId)
           );
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
